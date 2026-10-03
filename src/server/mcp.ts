@@ -25,6 +25,20 @@ import {
   updateSpread,
   updateSpreadSchema,
 } from "./services/books";
+import {
+  addCharacterImage,
+  characterImageSchema,
+  characterReferences,
+  createCharacter,
+  createCharacterSchema,
+  deleteCharacter,
+  getCharacter,
+  listCharacters,
+  removeCharacterImage,
+  updateCharacter,
+  updateCharacterImage,
+  updateCharacterSchema,
+} from "./services/characters";
 import { createComment, createCommentSchema, listComments, listOpenRequests, setCommentResolved } from "./services/comments";
 import { listCustomFonts } from "./services/fonts";
 import { HttpError } from "./util";
@@ -66,7 +80,9 @@ async function imageBuffer(args: { image_base64?: string; image_url?: string }):
   throw new HttpError(400, "bad_request", "Fournir image_base64 ou image_url.");
 }
 
-export function buildMcpServer(actor: Actor): McpServer {
+const MAX_INLINE_IMAGES = 12;
+
+export function buildMcpServer(actor: Actor, origin: string): McpServer {
   const server = new McpServer({ name: "la-fabrique", version: "0.1.0" }, { instructions: AGENT_GUIDE });
   const readOnly = { readOnlyHint: true, openWorldHint: false };
 
@@ -125,6 +141,54 @@ export function buildMcpServer(actor: Actor): McpServer {
         if (!assetId) return ok("Pas d'image ici.");
         const { file } = assetFilePath(getAsset(assetId), "web");
         return { content: [{ type: "image", data: fs.readFileSync(file).toString("base64"), mimeType: "image/webp" }] };
+      } catch (err) {
+        return run(() => {
+          throw err;
+        });
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_characters",
+    {
+      title: "Personnages du livre",
+      description: "Fiches des personnages : nom, rôle, apparence, images de référence (étiquette, principale).",
+      inputSchema: { book_id: bookId },
+      annotations: readOnly,
+    },
+    ({ book_id }) => run(() => listCharacters(book_id)),
+  );
+
+  server.registerTool(
+    "get_references",
+    {
+      title: "Références pour illustrer",
+      description:
+        "À appeler AVANT de produire une illustration : les personnages présents sur la double page (ou ceux demandés, ou tous), leur apparence, et leurs images de référence — affichées ici et en liens téléchargeables sans clé pendant 24 h (signedUrl) à transmettre à un générateur d'images.",
+      inputSchema: {
+        book_id: bookId,
+        spread_id: spreadId.optional().describe("Double page à illustrer : seuls ses personnages."),
+        character_ids: z.array(z.string()).optional(),
+        images: z.enum(["primary", "all", "none"]).optional().describe("Images à afficher ici. Défaut : primary (la principale de chaque personnage)."),
+      },
+      annotations: readOnly,
+    },
+    async ({ book_id, spread_id, character_ids, images }) => {
+      try {
+        const refs = characterReferences(book_id, { origin, spreadId: spread_id, characterIds: character_ids });
+        const mode = images ?? "primary";
+        const shown = mode === "none" ? [] : refs.characters.flatMap((c) => c.images.filter((i) => mode === "all" || i.primary).map((i) => ({ c, i })));
+        const content: ToolResult["content"] = [{ type: "text", text: JSON.stringify(refs, null, 2) }];
+        const assetOf = new Map(listCharacters(book_id).flatMap((c) => c.images.map((x) => [x.id, x.image.id] as const)));
+        for (const { c, i } of shown.slice(0, MAX_INLINE_IMAGES)) {
+          const assetId = assetOf.get(i.id);
+          if (!assetId) continue;
+          const { file } = assetFilePath(getAsset(assetId), "web");
+          content.push({ type: "text", text: `${c.name}${i.label ? ` — ${i.label}` : ""}${i.primary ? " (principale)" : ""}` });
+          content.push({ type: "image", data: fs.readFileSync(file).toString("base64"), mimeType: "image/webp" });
+        }
+        return { content };
       } catch (err) {
         return run(() => {
           throw err;
@@ -239,6 +303,7 @@ export function buildMcpServer(actor: Actor): McpServer {
         textValign: z.enum(TEXT_VALIGNS).nullable().optional(),
         textSizePt: z.number().min(6).max(96).nullable().optional(),
         pageColor: z.string().nullable().optional().describe("#RRGGBB"),
+        characterIds: z.array(z.string()).optional().describe("Personnages présents sur la double page (ids de list_characters)."),
         baseVersion: z.number().int().optional(),
       },
       annotations: write,
@@ -310,6 +375,86 @@ export function buildMcpServer(actor: Actor): McpServer {
         const asset = await storeImage(await imageBuffer(args), { kind: "cover", bookId: args.book_id, originalName: args.file_name, actor });
         return setCover(args.book_id, asset, actor);
       }),
+  );
+
+  server.registerTool(
+    "create_character",
+    {
+      title: "Créer un personnage",
+      description: "Nouvelle fiche : nom, rôle dans l'histoire, apparence décrite en mots (couleurs, vêtements, signes distinctifs).",
+      inputSchema: { book_id: bookId, ...createCharacterSchema.shape },
+      annotations: write,
+    },
+    ({ book_id, ...input }) => run(() => createCharacter(book_id, createCharacterSchema.parse(input), actor)),
+  );
+
+  server.registerTool(
+    "update_character",
+    {
+      title: "Modifier un personnage",
+      description: "Nom, rôle, apparence ou ordre (position). Seuls les champs fournis changent.",
+      inputSchema: { book_id: bookId, character_id: z.string(), ...updateCharacterSchema.shape },
+      annotations: write,
+    },
+    ({ book_id, character_id, ...patch }) => run(() => updateCharacter(book_id, character_id, updateCharacterSchema.parse(patch), actor)),
+  );
+
+  server.registerTool(
+    "delete_character",
+    {
+      title: "Supprimer un personnage",
+      description: "Supprime la fiche et la retire des doubles pages (restaurable depuis l'historique).",
+      inputSchema: { book_id: bookId, character_id: z.string() },
+      annotations: { ...write, destructiveHint: true },
+    },
+    ({ book_id, character_id }) => run(() => deleteCharacter(book_id, character_id, actor)),
+  );
+
+  server.registerTool(
+    "add_character_image",
+    {
+      title: "Ajouter une image de référence",
+      description:
+        "Image d'un personnage (planche, face, profil, expression…). label = ce qu'elle montre. primary = image à utiliser en premier (la première ajoutée l'est d'office).",
+      inputSchema: {
+        book_id: bookId,
+        character_id: z.string(),
+        ...imageInput,
+        label: z.string().max(80).optional(),
+        primary: z.boolean().optional(),
+      },
+      annotations: write,
+    },
+    (args) =>
+      run(async () => {
+        getCharacter(args.book_id, args.character_id);
+        const input = characterImageSchema.parse({ label: args.label, primary: args.primary });
+        const asset = await storeImage(await imageBuffer(args), { kind: "character", bookId: args.book_id, originalName: args.file_name, actor });
+        return addCharacterImage(args.book_id, args.character_id, asset, input, actor);
+      }),
+  );
+
+  server.registerTool(
+    "update_character_image",
+    {
+      title: "Légender une image de référence",
+      description: "Change l'étiquette ou fait de l'image la référence principale.",
+      inputSchema: { book_id: bookId, character_id: z.string(), image_id: z.string(), ...characterImageSchema.shape },
+      annotations: write,
+    },
+    ({ book_id, character_id, image_id, ...patch }) =>
+      run(() => updateCharacterImage(book_id, character_id, image_id, characterImageSchema.parse(patch), actor)),
+  );
+
+  server.registerTool(
+    "remove_character_image",
+    {
+      title: "Retirer une image de référence",
+      description: "Retire l'image de la fiche (restaurable).",
+      inputSchema: { book_id: bookId, character_id: z.string(), image_id: z.string() },
+      annotations: write,
+    },
+    ({ book_id, character_id, image_id }) => run(() => removeCharacterImage(book_id, character_id, image_id, actor)),
   );
 
   server.registerTool(

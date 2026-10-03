@@ -1,5 +1,5 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { resolveActor } from "@/server/http";
+import { publicOrigin, resolveActor } from "@/server/http";
 import { buildMcpServer } from "@/server/mcp";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ async function handle(req: Request): Promise<Response> {
       { status: 401, headers: { "WWW-Authenticate": 'Bearer realm="La Fabrique"' } },
     );
   }
-  const server = buildMcpServer(actor);
+  const server = buildMcpServer(actor, publicOrigin(req));
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
