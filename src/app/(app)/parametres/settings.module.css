@@ -153,3 +153,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+.howto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text-2);
+  font-size: 13px;
+}
+
+.howto li::marker {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+}

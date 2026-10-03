@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Plus, ShieldOff } from "lucide-react";
+import { KeyRound, Link2, Plus, ShieldOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,33 @@ interface KeyInfo {
   revokedAt: string | null;
 }
 
-type Client = "claude-code" | "claude-desktop" | "rest";
+type Client = "claude-ai" | "claude-code" | "claude-desktop" | "rest";
+type KeyClient = Exclude<Client, "claude-ai">;
 
-function snippets(origin: string, key: string): Record<Client, string> {
+export interface ConnectionInfo {
+  id: string;
+  name: string;
+  clientName: string;
+  redirectHost: string;
+  scope: "read" | "write";
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  expired: boolean;
+}
+
+const KEY_CLIENTS = [
+  { value: "claude-code", label: "Claude Code" },
+  { value: "claude-desktop", label: "Fichier Desktop" },
+  { value: "rest", label: "API REST" },
+] as const;
+
+function snippets(origin: string, key: string, withOAuth: boolean): Record<KeyClient, string> {
+  const withKey = `claude mcp add --transport http lafabrique ${origin}/api/mcp \\\n  --header "Authorization: Bearer ${key}"`;
   return {
-    "claude-code": `claude mcp add --transport http lafabrique ${origin}/api/mcp \\\n  --header "Authorization: Bearer ${key}"`,
+    "claude-code": withOAuth
+      ? `# Connexion par le navigateur (OAuth), puis /mcp dans Claude Code\nclaude mcp add --transport http lafabrique ${origin}/api/mcp\n\n# Ou avec une clé\n${withKey}`
+      : withKey,
     "claude-desktop": JSON.stringify(
       {
         mcpServers: {
@@ -42,14 +64,25 @@ function snippets(origin: string, key: string): Record<Client, string> {
   };
 }
 
-export function AgentKeys({ keys, origin, guide }: { keys: KeyInfo[]; origin: string; guide: string }) {
+export function AgentKeys({
+  keys,
+  connections,
+  origin,
+  guide,
+}: {
+  keys: KeyInfo[];
+  connections: ConnectionInfo[];
+  origin: string;
+  guide: string;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("Claude");
   const [scope, setScope] = useState<"write" | "read">("write");
   const [created, setCreated] = useState<{ key: string; info: KeyInfo } | null>(null);
-  const [client, setClient] = useState<Client>("claude-code");
+  const [client, setClient] = useState<Client>("claude-ai");
+  const [dialogClient, setDialogClient] = useState<KeyClient>("claude-code");
   const [toRevoke, setToRevoke] = useState<KeyInfo | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -80,8 +113,19 @@ export function AgentKeys({ keys, origin, guide }: { keys: KeyInfo[]; origin: st
     }
   }
 
+  async function revokeConnection(c: ConnectionInfo) {
+    try {
+      await apiFetch(`/api/v1/oauth/grants/${c.id}`, { method: "DELETE" });
+      router.refresh();
+      toast.show(`Connexion « ${c.name} » révoquée`);
+    } catch (err) {
+      toast.show(errorMessage(err), { tone: "danger" });
+    }
+  }
+
   const active = keys.filter((k) => !k.revokedAt);
-  const sample = snippets(origin, created?.key ?? "lfab_…");
+  const sample = snippets(origin, "lfab_…", true);
+  const createdSample = snippets(origin, created?.key ?? "lfab_…", false);
 
   return (
     <>
@@ -121,6 +165,43 @@ export function AgentKeys({ keys, origin, guide }: { keys: KeyInfo[]; origin: st
 
       <section className={styles.card}>
         <div className={styles.cardHead}>
+          <h2 className={styles.cardTitle}>Connexions OAuth</h2>
+          <Hint text="Agents branchés depuis claude.ai, Claude Desktop, le mobile ou Claude Code sans clé : chaque connexion a été autorisée par vous, avec un nom et une portée." />
+        </div>
+        {connections.length === 0 ? (
+          <p className={styles.muted}>Aucune connexion.</p>
+        ) : (
+          <ul className={styles.list}>
+            {connections.map((c) => (
+              <li key={c.id} className={[styles.item, (c.revokedAt || c.expired) && styles.revoked].filter(Boolean).join(" ")}>
+                <Link2 size={18} aria-hidden />
+                <div className={styles.itemMain}>
+                  <span className={styles.itemName}>{c.name}</span>
+                  <span className={styles.mono}>
+                    {c.clientName} · {c.redirectHost} · autorisée {relativeTime(c.createdAt)} ·{" "}
+                    {c.revokedAt
+                      ? `révoquée ${relativeTime(c.revokedAt)}`
+                      : c.expired
+                        ? "expirée"
+                        : c.lastUsedAt
+                          ? `utilisée ${relativeTime(c.lastUsedAt)}`
+                          : "jamais utilisée"}
+                  </span>
+                </div>
+                <Badge tone={c.scope === "write" ? "agent" : "neutral"}>{c.scope === "write" ? "Écriture" : "Lecture"}</Badge>
+                {!c.revokedAt && !c.expired && (
+                  <Button variant="danger" size="sm" icon={<ShieldOff />} onClick={() => void revokeConnection(c)}>
+                    Révoquer
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>Brancher un agent</h2>
           <Hint text="Serveur MCP pour Claude ; API REST pour tout autre agent ou script. Les deux font la même chose." />
         </div>
@@ -129,13 +210,22 @@ export function AgentKeys({ keys, origin, guide }: { keys: KeyInfo[]; origin: st
           small
           value={client}
           onChange={setClient}
-          segments={[
-            { value: "claude-code", label: "Claude Code" },
-            { value: "claude-desktop", label: "Claude Desktop" },
-            { value: "rest", label: "API REST" },
-          ]}
+          segments={[{ value: "claude-ai", label: "claude.ai" }, ...KEY_CLIENTS]}
         />
-        <CopyBlock value={sample[client]} />
+        {client === "claude-ai" ? (
+          <>
+            <ol className={styles.howto}>
+              <li>Paramètres › Connecteurs › Ajouter un connecteur personnalisé (web, Desktop ; il apparaît ensuite sur mobile).</li>
+              <li>Nom : La Fabrique. URL :</li>
+            </ol>
+            <CopyBlock value={`${origin}/api/mcp`} label="Copier l'adresse" />
+            <ol className={styles.howto} start={3}>
+              <li>« Se connecter » : La Fabrique demande votre accord, le nom de l&apos;agent et sa portée.</li>
+            </ol>
+          </>
+        ) : (
+          <CopyBlock value={sample[client]} />
+        )}
         <p className={styles.mono}>
           MCP : {origin}/api/mcp · REST : {origin}/api/v1 · {active.length} clé{active.length > 1 ? "s" : ""} active{active.length > 1 ? "s" : ""}
         </p>
@@ -174,18 +264,14 @@ export function AgentKeys({ keys, origin, guide }: { keys: KeyInfo[]; origin: st
       >
         <p>Copiez-la maintenant : elle ne sera plus jamais affichée.</p>
         {created && <CopyBlock value={created.key} label="Copier la clé" />}
-        <Segmented<Client>
+        <Segmented<KeyClient>
           label="Client"
           small
-          value={client}
-          onChange={setClient}
-          segments={[
-            { value: "claude-code", label: "Claude Code" },
-            { value: "claude-desktop", label: "Claude Desktop" },
-            { value: "rest", label: "API REST" },
-          ]}
+          value={dialogClient}
+          onChange={setDialogClient}
+          segments={KEY_CLIENTS}
         />
-        <CopyBlock value={sample[client]} />
+        <CopyBlock value={createdSample[dialogClient]} />
       </Dialog>
 
       <Dialog

@@ -1,10 +1,9 @@
-import dns from "node:dns/promises";
 import fs from "node:fs";
-import net from "node:net";
 import path from "node:path";
 import sharp, { type Metadata } from "sharp";
 import { dataDir, getDb } from "./db";
 import type { Actor } from "./http";
+import { fetchPublic } from "./net";
 import { badRequest, HttpError, newId, notFound, nowIso, sha256 } from "./util";
 
 export type AssetKind = "illustration" | "cover" | "font" | "character";
@@ -170,36 +169,12 @@ export function decodeBase64(value: string): Buffer {
   return buffer;
 }
 
-const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[?::1\]?$|\[?f[cd][0-9a-f]{2}:|\[?fe80:)/i;
-
 /** Downloads an image an agent points to. Public https only: no reaching into the LAN. */
 export async function fetchImage(url: string): Promise<Buffer> {
-  let parsed: URL;
   try {
-    parsed = new URL(url);
-  } catch {
-    throw badRequest("Adresse d'image invalide.");
+    return await fetchPublic(url, { maxBytes: MAX_IMAGE_BYTES, timeoutMs: 20_000, what: "Adresse d'image" });
+  } catch (err) {
+    if (err instanceof HttpError && err.status === 413) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
+    throw err;
   }
-  if (parsed.protocol !== "https:" || PRIVATE_HOST.test(parsed.hostname)) {
-    throw badRequest("Seules les adresses https publiques sont acceptées.");
-  }
-  // The name could still resolve to a private address: check what it points to.
-  const addresses = await dns.lookup(parsed.hostname, { all: true }).catch(() => []);
-  if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) {
-    throw badRequest("Seules les adresses https publiques sont acceptées.");
-  }
-  const res = await fetch(parsed, { redirect: "error", signal: AbortSignal.timeout(20_000) });
-  if (!res.ok) throw badRequest(`Téléchargement impossible (${res.status}).`);
-  const length = Number(res.headers.get("content-length") ?? 0);
-  if (length > MAX_IMAGE_BYTES) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
-  const buffer = Buffer.from(await res.arrayBuffer());
-  if (buffer.length > MAX_IMAGE_BYTES) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
-  return buffer;
-}
-
-export function isPrivateAddress(address: string): boolean {
-  if (net.isIPv4(address)) return PRIVATE_HOST.test(address);
-  const lower = address.toLowerCase();
-  if (lower.startsWith("::ffff:")) return isPrivateAddress(lower.slice(7));
-  return lower === "::1" || lower === "::" || /^f[cd]/.test(lower) || lower.startsWith("fe80");
 }

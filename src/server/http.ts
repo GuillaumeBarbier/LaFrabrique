@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { authenticateApiKey } from "./auth/api-keys";
 import { SESSION_COOKIE, userFromSession } from "./auth/users";
+import { ACCESS_PREFIX, actorFromAccessToken } from "./oauth/flow";
 import { badRequest, forbidden, HttpError } from "./util";
 
 export type ActorType = "human" | "agent";
@@ -30,7 +31,14 @@ export function resolveActor(req: Request): Actor | null {
   const clientId = req.headers.get("x-client-id")?.slice(0, 64) || undefined;
   const auth = req.headers.get("authorization");
   if (auth?.toLowerCase().startsWith("bearer ")) {
-    const key = authenticateApiKey(auth.slice(7).trim());
+    const token = auth.slice(7).trim();
+    if (token.startsWith(ACCESS_PREFIX)) {
+      // OAuth tokens are issued for the MCP resource only (RFC 8707 audience, ADR-0007).
+      if (!new URL(req.url).pathname.startsWith("/api/mcp")) return null;
+      const actor = actorFromAccessToken(token);
+      return actor ? { ...actor, clientId } : null;
+    }
+    const key = authenticateApiKey(token);
     if (!key) return null;
     return { type: "agent", name: key.name, scope: key.scope, keyId: key.id, clientId };
   }

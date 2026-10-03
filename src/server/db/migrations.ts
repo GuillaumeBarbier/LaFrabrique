@@ -206,4 +206,58 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 3,
+    name: "oauth",
+    sql: `
+      -- OAuth 2.1 for MCP connectors (ADR-0007). A client is registered (DCR) or identified by
+      -- the URL of its metadata document (CIMD); a grant is one consented connection, i.e. one
+      -- agent with a name and a scope; tokens are stored hashed.
+      CREATE TABLE oauth_clients (
+        id TEXT PRIMARY KEY,               -- client_id: random (DCR) or https URL (CIMD)
+        name TEXT NOT NULL,
+        redirect_uris TEXT NOT NULL,       -- JSON array
+        secret_hash TEXT,                  -- confidential DCR clients only
+        kind TEXT NOT NULL CHECK (kind IN ('dcr', 'cimd')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE oauth_codes (
+        hash TEXT PRIMARY KEY,
+        client_id TEXT NOT NULL REFERENCES oauth_clients(id) ON DELETE CASCADE,
+        redirect_uri TEXT NOT NULL,
+        code_challenge TEXT NOT NULL,
+        scope TEXT NOT NULL CHECK (scope IN ('read', 'write')),
+        name TEXT NOT NULL,
+        resource TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        grant_id TEXT                      -- set at exchange: a replayed code revokes it
+      );
+
+      CREATE TABLE oauth_grants (
+        id TEXT PRIMARY KEY,
+        client_id TEXT NOT NULL REFERENCES oauth_clients(id) ON DELETE CASCADE,
+        client_name TEXT NOT NULL,
+        redirect_host TEXT NOT NULL,
+        name TEXT NOT NULL,                -- signs the agent's changes
+        scope TEXT NOT NULL CHECK (scope IN ('read', 'write')),
+        resource TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        last_used_at TEXT,
+        revoked_at TEXT
+      );
+
+      CREATE TABLE oauth_tokens (
+        hash TEXT PRIMARY KEY,
+        grant_id TEXT NOT NULL REFERENCES oauth_grants(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('access', 'refresh')),
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        used_at TEXT                       -- refresh tokens rotate: used once
+      );
+      CREATE INDEX oauth_tokens_grant ON oauth_tokens(grant_id);
+    `,
+  },
 ];

@@ -7,7 +7,7 @@ import { TextField } from "@/components/ui/field";
 import { apiFetch, errorMessage } from "@/lib/client";
 import styles from "../auth.module.css";
 
-export function LoginForm() {
+export function LoginForm({ next = "/" }: { next?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +20,7 @@ export function LoginForm() {
     setError(null);
     try {
       await apiFetch("/api/auth/login", { method: "POST", json: { email, password } });
-      router.replace("/");
+      router.replace(next);
       router.refresh();
     } catch (err) {
       setError(errorMessage(err));

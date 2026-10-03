@@ -1,0 +1,33 @@
+.icon {
+  color: var(--color-accent-text);
+}
+
+.host {
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.warning {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.actions > :first-child {
+  flex: 1;
+}
+
+.note {
+  color: var(--color-text-2);
+  font-size: 12px;
+  text-align: center;
+}
