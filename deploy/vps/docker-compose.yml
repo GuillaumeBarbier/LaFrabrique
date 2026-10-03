@@ -1,0 +1,49 @@
+# La Fabrique on a VPS behind the shared Traefik — copy to /opt/lafabrique/docker-compose.yml
+# (procedure: docs/tech/03-deploiement.md). Traefik and Watchtower are NOT declared here:
+# they are shared with the other projects of the server.
+#
+# Two of Guillaume's VPS run this stack; only the certificate resolver differs:
+#   KVM4 (187.77.170.17, Pro-Resa)      CERT_RESOLVER=le              (http→https is global)
+#   VPS 69.62.109.49 (designer-tools)   CERT_RESOLVER=mytlschallenge  (+ the http router below)
+
+services:
+  lafabrique:
+    image: ghcr.io/guillaumebarbier/lafabrique:latest
+    container_name: lafabrique
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      APP_URL: https://lafabrique.guillaume-barbier.com
+    volumes:
+      - lafabrique-data:/data
+    expose:
+      - "3000"
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.docker.network=root_default
+      - traefik.http.routers.lafabrique.entrypoints=websecure
+      - traefik.http.routers.lafabrique.rule=Host(`lafabrique.guillaume-barbier.com`)
+      - traefik.http.routers.lafabrique.tls=true
+      - traefik.http.routers.lafabrique.tls.certresolver=${CERT_RESOLVER:-le}
+      - traefik.http.routers.lafabrique.middlewares=lafabrique-headers
+      # VPS 69.62.109.49 only (no global redirect there): uncomment the three lines below.
+      # - traefik.http.routers.lafabrique-http.entrypoints=web
+      # - traefik.http.routers.lafabrique-http.rule=Host(`lafabrique.guillaume-barbier.com`)
+      # - traefik.http.routers.lafabrique-http.middlewares=redirect-to-https@docker
+      - traefik.http.middlewares.lafabrique-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.lafabrique-headers.headers.forceSTSHeader=true
+      - traefik.http.middlewares.lafabrique-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.lafabrique-headers.headers.referrerPolicy=same-origin
+      - traefik.http.services.lafabrique.loadbalancer.server.port=3000
+    networks:
+      - edge
+
+volumes:
+  lafabrique-data:
+
+networks:
+  edge:
+    name: root_default
+    external: true

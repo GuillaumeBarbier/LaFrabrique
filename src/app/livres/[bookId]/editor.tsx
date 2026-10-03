@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, FileText, History, MessagesSquare, Plus, Printer, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Plus, Printer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { pageStyles, pageVars, SpreadView, CoverContent } from "@/components/book/pages";
 import { STATUS_TONES } from "@/components/book/status-badge";
@@ -384,10 +384,10 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
         <div className={styles.tabs} role="tablist">
           {(
             [
-              { key: "page", label: selected === COVER ? "Couverture" : "Page", icon: FileText },
-              { key: "book", label: "Livre", icon: SlidersHorizontal },
-              { key: "comments", label: "Échanges", icon: MessagesSquare, count: openForHuman },
-              { key: "history", label: "Historique", icon: History },
+              { key: "page", label: selected === COVER ? "Couverture" : "Page" },
+              { key: "book", label: "Livre" },
+              { key: "comments", label: "Échanges", count: openForHuman },
+              { key: "history", label: "Historique" },
             ] as const
           ).map((t) => (
             <button
@@ -399,7 +399,6 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
               onClick={() => setTab(t.key)}
               title={t.label}
             >
-              <t.icon size={15} aria-hidden />
               {t.label}
               {"count" in t && t.count > 0 && (
                 <span className={styles.tabCount} title="En attente de votre réponse">

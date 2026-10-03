@@ -6,7 +6,7 @@ import { MIGRATIONS } from "./migrations";
 export type DB = Database.Database;
 
 export function dataDir(): string {
-  return path.resolve(process.env.DATA_DIR ?? "./data");
+  return path.resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR ?? "./data");
 }
 
 export function migrate(db: DB): void {

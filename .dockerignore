@@ -7,3 +7,5 @@ data
 docs
 *.md
 !README.md
+.github
+deploy
