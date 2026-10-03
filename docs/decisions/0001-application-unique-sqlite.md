@@ -10,13 +10,13 @@ La Fabrique est un outil personnel : un humain, quelques agents. Il doit tourner
 2. **SQLite** (`better-sqlite3`, mode WAL) pour les données, **fichiers sur disque** pour les illustrations et les polices. Tout vit dans `DATA_DIR` (`/data` dans le conteneur) : sauvegarder ou déménager La Fabrique = copier un dossier.
 3. **SQL écrit à la main** avec des migrations numérotées (`src/server/db/migrations.ts`) jouées au démarrage, validation des entrées par `zod`. Pas d'ORM : le schéma est petit et lisible.
 4. **Images traitées par `sharp`** : chaque illustration garde son original (impression) et reçoit une version écran et une vignette en WebP.
-5. **Une image Docker multi-architecture** (amd64, arm64), publiée sur GHCR.
+5. **Une image Docker** `node:22-slim` publiée sur GHCR, en amd64 (VPS et Synology « + » sont en x86_64). `better-sqlite3` embarque ses binaires arm64 : passer en multi-architecture ne demande qu'une ligne si le NAS est en ARM, au prix d'un build plus lent.
 
 ## Conséquences
 
 - Un seul processus : le direct (SSE) passe par un bus d'événements en mémoire. Si un jour plusieurs instances tournent, il faudra un bus partagé — non prévu.
 - Pas de PostgreSQL à administrer ; la sauvegarde à chaud se fait par `VACUUM INTO` (F2.3).
-- Modules natifs (`better-sqlite3`, `sharp`) : précompilés pour linux amd64/arm64, rien à compiler dans l'image.
+- Modules natifs (`better-sqlite3`, `sharp`) : binaires précompilés fournis par les paquets, rien à compiler dans l'image (pnpm ne lance pas `node-gyp` pour `better-sqlite3`).
 
 ## Statut
 
