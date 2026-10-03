@@ -1,0 +1,187 @@
+/* Pill buttons (Pro-Resa v0.1): on hover the gold rises from the bottom; press scales to .97. */
+
+.btn {
+  --btn-bg: var(--color-primary);
+  --btn-fg: var(--color-primary-fg);
+  --btn-border: transparent;
+  --btn-rise: var(--color-accent);
+  --btn-rise-fg: var(--color-accent-fg);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--btn-border);
+  border-radius: var(--radius-full);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  text-decoration: none;
+  overflow: hidden;
+  transition:
+    color var(--duration-base) var(--ease-out),
+    transform var(--duration-instant) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--btn-rise);
+  transform: translateY(101%);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.btn:hover:not(:disabled)::before {
+  transform: translateY(0);
+}
+
+.btn:hover:not(:disabled) {
+  color: var(--btn-rise-fg);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.btn svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.sm {
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  font-size: 13px;
+}
+
+.iconOnly {
+  width: var(--control-height);
+  padding: 0;
+}
+
+.iconOnly.sm {
+  width: var(--control-height-sm);
+}
+
+.gold {
+  --btn-bg: var(--color-accent);
+  --btn-fg: var(--color-accent-fg);
+  --btn-rise: var(--color-black);
+  --btn-rise-fg: var(--color-gold-400);
+}
+
+.secondary {
+  --btn-bg: transparent;
+  --btn-fg: var(--color-text);
+  --btn-border: var(--color-border-strong);
+  --btn-rise: var(--color-text);
+  --btn-rise-fg: var(--color-bg);
+}
+
+.ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--color-text-2);
+  --btn-rise: var(--color-surface-2);
+  --btn-rise-fg: var(--color-text);
+}
+
+.danger {
+  --btn-bg: transparent;
+  --btn-fg: var(--color-danger);
+  --btn-border: color-mix(in srgb, var(--color-danger) 40%, transparent);
+  --btn-rise: var(--color-danger);
+  --btn-rise-fg: var(--color-danger-fg);
+}
+
+.loading {
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.dots {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--btn-fg);
+}
+
+.dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: blink 900ms var(--ease-in-out) infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Tooltip for icon-only buttons and any [data-tip] element. */
+.tip {
+  position: relative;
+}
+
+.tip[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 50;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.tip[data-tip]:hover::after,
+.tip[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 300ms;
+}
+
+.tipUp[data-tip]::after {
+  top: auto;
+  bottom: calc(100% + 8px);
+}

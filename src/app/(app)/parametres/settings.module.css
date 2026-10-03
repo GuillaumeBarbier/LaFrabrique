@@ -1,0 +1,155 @@
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 14px;
+  color: var(--color-text-2);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tab[aria-current="page"] {
+  color: var(--color-text);
+}
+
+.tab[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-text);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 860px;
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cardTitle {
+  flex: 1;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.muted {
+  color: var(--color-text-2);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.itemMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+}
+
+.itemName {
+  font-weight: var(--font-weight-semibold);
+}
+
+.mono {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--color-text-2);
+}
+
+.revoked {
+  opacity: 0.5;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stepTitle {
+  font-weight: var(--font-weight-semibold);
+}
+
+.fontGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.fontCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.fontSample {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.groupTitle {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-2);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 700px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

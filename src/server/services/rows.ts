@@ -52,9 +52,9 @@ export function parseTypography(json: string): Typography {
   }
 }
 
-export function assetUrls(id: string): Pick<AssetRef, "url" | "webUrl" | "thumbUrl"> {
+export function assetUrls(id: string): Pick<AssetRef, "url" | "printUrl" | "webUrl" | "thumbUrl"> {
   const base = `/api/v1/assets/${id}`;
-  return { url: base, webUrl: `${base}?size=web`, thumbUrl: `${base}?size=thumb` };
+  return { url: base, printUrl: `${base}?size=print`, webUrl: `${base}?size=web`, thumbUrl: `${base}?size=thumb` };
 }
 
 export function loadAssetRefs(db: DB, ids: (string | null)[]): Map<string, AssetRef> {

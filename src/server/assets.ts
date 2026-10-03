@@ -2,13 +2,13 @@ import dns from "node:dns/promises";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import { dataDir, getDb } from "./db";
 import type { Actor } from "./http";
 import { badRequest, HttpError, newId, notFound, nowIso, sha256 } from "./util";
 
 export type AssetKind = "illustration" | "cover" | "font";
-export type AssetSize = "original" | "web" | "thumb";
+export type AssetSize = "original" | "print" | "web" | "thumb";
 
 export interface AssetRow {
   id: string;
@@ -52,6 +52,12 @@ export function getAsset(id: string): AssetRow {
 export function assetFilePath(asset: AssetRow, size: AssetSize): { file: string; mime: string } {
   const dir = assetDir(asset.id);
   if (size === "original" || asset.kind === "font") return { file: path.join(dir, `original.${asset.ext}`), mime: asset.mime };
+  // Browsers cannot show TIFF: print uses a full-resolution JPEG made at upload.
+  if (size === "print") {
+    return asset.ext === "tif"
+      ? { file: path.join(dir, "print.jpg"), mime: "image/jpeg" }
+      : { file: path.join(dir, `original.${asset.ext}`), mime: asset.mime };
+  }
   return { file: path.join(dir, `${size}.webp`), mime: "image/webp" };
 }
 
@@ -65,7 +71,7 @@ export async function storeImage(
 ): Promise<AssetRow> {
   if (buffer.length === 0) throw badRequest("Fichier vide.");
   if (buffer.length > MAX_IMAGE_BYTES) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
-  let meta: sharp.Metadata;
+  let meta: Metadata;
   try {
     meta = await sharp(buffer).metadata();
   } catch {
@@ -83,6 +89,7 @@ export async function storeImage(
   try {
     fs.writeFileSync(path.join(dir, `original.${format.ext}`), buffer);
     await sharp(buffer).rotate().resize({ width: 1800, height: 1800, fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toFile(path.join(dir, "web.webp"));
+    if (format.ext === "tif") await sharp(buffer).rotate().jpeg({ quality: 92 }).toFile(path.join(dir, "print.jpg"));
     await sharp(buffer).rotate().resize({ width: 480, height: 480, fit: "inside", withoutEnlargement: true }).webp({ quality: 74 }).toFile(path.join(dir, "thumb.webp"));
   } catch (err) {
     fs.rmSync(dir, { recursive: true, force: true });

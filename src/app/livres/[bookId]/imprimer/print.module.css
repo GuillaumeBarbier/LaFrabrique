@@ -1,0 +1,125 @@
+/* Print (F1.11): every sheet at its true size; the browser's "Save as PDF" makes the file. */
+
+.screen {
+  min-height: 100dvh;
+  padding: 0 0 var(--space-10);
+  background: var(--workbench);
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-width) solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.toolTitle {
+  flex: 1;
+  min-width: 200px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 900px;
+  margin: var(--space-5) auto 0;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 13px;
+}
+
+.warnings ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.howto {
+  max-width: 900px;
+  margin: var(--space-3) auto 0;
+  color: var(--color-text-2);
+  font-size: 12px;
+  text-align: center;
+}
+
+.sheets {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.sheet {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow-2);
+  break-after: page;
+  page-break-after: always;
+}
+
+.sheet > * {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto !important;
+}
+
+.sheetLabel {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--color-text-2);
+  margin-bottom: calc(var(--space-6) * -1 + 6px);
+}
+
+.halfRight {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media print {
+  .screen {
+    padding: 0;
+    background: #fff;
+  }
+
+  .toolbar,
+  .warnings,
+  .howto,
+  .sheetLabel {
+    display: none !important;
+  }
+
+  .sheets {
+    display: block;
+    margin: 0;
+  }
+
+  .sheet {
+    box-shadow: none;
+    margin: 0;
+  }
+
+  :global(html),
+  :global(body) {
+    background: #fff !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

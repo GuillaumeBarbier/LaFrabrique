@@ -1,0 +1,216 @@
+/* App shell — black column with the gold marker on the current screen (Pro-Resa app shell). */
+
+.shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  background: var(--color-surface);
+}
+
+.sidebar {
+  --side-fg: #f7f6f2;
+  --side-2: var(--color-grey-400);
+  --side-hover: rgba(247, 246, 242, 0.07);
+  --logo-ink: #0a0a0a;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: 20px 14px 16px;
+  background: var(--color-black);
+  color: var(--side-fg);
+  overflow-y: auto;
+}
+
+.brand {
+  display: inline-flex;
+  padding: 6px 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand:focus-visible,
+.navLink:focus-visible,
+.signOut:focus-visible {
+  outline: var(--focus-ring-width) solid #7b93ff;
+  outline-offset: 2px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navLink {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: var(--side-2);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.navLink:hover {
+  background: var(--side-hover);
+  color: var(--side-fg);
+}
+
+.navLink[aria-current="page"] {
+  background: rgba(247, 246, 242, 0.1);
+  color: var(--side-fg);
+}
+
+.navLink::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  width: 4px;
+  height: 22px;
+  border-radius: 0 4px 4px 0;
+  background: var(--color-gold-400);
+  transform: translateY(-50%) scaleY(0);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.navLink[aria-current="page"]::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+.navLink[aria-current="page"] svg {
+  color: var(--color-gold-400);
+}
+
+.navLink svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.count {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-gold-400);
+  color: var(--color-black);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 20px;
+  text-align: center;
+}
+
+.foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(247, 246, 242, 0.06);
+}
+
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--color-gold-400);
+  color: var(--color-black);
+  font-weight: var(--font-weight-semibold);
+}
+
+.who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--font-weight-medium);
+}
+
+.signOut {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--side-2);
+}
+
+.signOut:hover {
+  background: var(--side-hover);
+  color: var(--side-fg);
+}
+
+.main {
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    z-index: 20;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 10px 12px;
+    overflow: visible;
+  }
+
+  .brand span span:last-child {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: row;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .navLink {
+    height: 38px;
+    padding: 0 10px;
+  }
+
+  .navLabel {
+    display: none;
+  }
+
+  .navLink::before {
+    display: none;
+  }
+
+  .foot {
+    margin: 0;
+    padding: 4px;
+    background: transparent;
+  }
+
+  .who,
+  .avatar {
+    display: none;
+  }
+}

@@ -12,8 +12,10 @@ export interface AssetRef {
   id: string;
   width: number | null;
   height: number | null;
-  /** Original file, for print. */
+  /** Original file, as uploaded. */
   url: string;
+  /** Full resolution in a format browsers display (the original, or a JPEG of a TIFF). */
+  printUrl: string;
   /** WebP, 1800 px at most. */
   webUrl: string;
   /** WebP, 480 px at most. */

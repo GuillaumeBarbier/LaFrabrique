@@ -1,0 +1,29 @@
+.cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 4px 10px 10px 4px;
+  background: var(--page-color, #fffdf7);
+  box-shadow:
+    inset 6px 0 8px -6px rgba(0, 0, 0, 0.25),
+    var(--shadow-2);
+}
+
+.cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.typo {
+  padding: 12%;
+  color: var(--text-color, #1f1b16);
+  font-size: clamp(16px, 2.2vw, 26px);
+  line-height: 1.1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
