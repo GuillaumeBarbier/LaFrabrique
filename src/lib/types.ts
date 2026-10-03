@@ -36,9 +36,67 @@ export interface Spread {
   textValign: TextValign | null;
   textSizePt: number | null;
   pageColor: string | null;
+  /** Characters present on this spread (ids of book.characters): their references guide the illustration. */
+  characterIds: string[];
   updatedAt: string;
   updatedBy: ActorRef;
   version: number;
+}
+
+export interface CharacterImage {
+  id: string;
+  /** What the image shows: "face", "profil", "planche", "expression joyeuse"… */
+  label: string;
+  /** The reference to use first. One per character. */
+  primary: boolean;
+  image: AssetRef;
+  createdAt: string;
+  createdBy: ActorRef;
+}
+
+export interface Character {
+  id: string;
+  name: string;
+  /** Who they are in the story: "le héros, un renardeau de 6 ans". */
+  role: string;
+  /** What they look like, in words: colours, clothes, distinctive features. */
+  appearance: string;
+  position: number;
+  images: CharacterImage[];
+  updatedAt: string;
+  updatedBy: ActorRef;
+  version: number;
+}
+
+export interface ReferenceImage {
+  id: string;
+  label: string;
+  primary: boolean;
+  width: number | null;
+  height: number | null;
+  /** Absolute, full resolution; needs the API key. */
+  url: string;
+  /** Absolute, full resolution (JPEG/PNG/WebP), readable without key until `expiresAt`: for image generators. */
+  signedUrl: string;
+  /** Same, screen size (WebP, 1800 px). */
+  signedWebUrl: string;
+}
+
+export interface CharacterReference {
+  id: string;
+  name: string;
+  role: string;
+  appearance: string;
+  images: ReferenceImage[];
+}
+
+/** What an illustrating agent needs: who is on the page and what they look like. */
+export interface References {
+  bookId: string;
+  spreadId: string | null;
+  illustrationBrief: string | null;
+  expiresAt: string;
+  characters: CharacterReference[];
 }
 
 export interface Book {
@@ -61,6 +119,7 @@ export interface Book {
   archivedAt: string | null;
   version: number;
   spreads: Spread[];
+  characters: Character[];
   wordCount: number;
   openRequests: { forAgent: number; forHuman: number };
 }
@@ -101,6 +160,7 @@ export interface ActivityEntry {
   id: string;
   bookId: string;
   spreadId: string | null;
+  characterId: string | null;
   actor: ActorRef;
   action: string;
   summary: string;

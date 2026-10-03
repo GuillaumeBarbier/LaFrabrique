@@ -15,14 +15,25 @@ export type ActivityAction =
   | "spread.update"
   | "spread.delete"
   | "spread.reorder"
+  | "character.create"
+  | "character.update"
+  | "character.delete"
   | "restore";
 
-const RESTORABLE = new Set<string>(["book.update", "spread.update", "spread.delete", "spread.reorder"]);
+const RESTORABLE = new Set<string>([
+  "book.update",
+  "spread.update",
+  "spread.delete",
+  "spread.reorder",
+  "character.update",
+  "character.delete",
+]);
 
 interface ActivityRow {
   id: string;
   book_id: string;
   spread_id: string | null;
+  character_id: string | null;
   actor_type: "human" | "agent";
   actor_name: string;
   action: string;
@@ -35,6 +46,7 @@ interface ActivityRow {
 export interface RecordInput {
   bookId: string;
   spreadId?: string | null;
+  characterId?: string | null;
   actor: Actor;
   action: ActivityAction;
   labels: string[];
@@ -46,10 +58,13 @@ export function recordActivity(input: RecordInput): void {
   const db = getDb();
   const now = nowIso();
   const spreadId = input.spreadId ?? null;
+  const characterId = input.characterId ?? null;
   if (input.coalesce) {
     const last = db
-      .prepare("SELECT * FROM activity WHERE book_id = ? AND spread_id IS ? ORDER BY updated_at DESC, rowid DESC LIMIT 1")
-      .get(input.bookId, spreadId) as ActivityRow | undefined;
+      .prepare(
+        "SELECT * FROM activity WHERE book_id = ? AND spread_id IS ? AND character_id IS ? ORDER BY updated_at DESC, rowid DESC LIMIT 1",
+      )
+      .get(input.bookId, spreadId, characterId) as ActivityRow | undefined;
     if (
       last &&
       last.action === input.action &&
@@ -63,12 +78,13 @@ export function recordActivity(input: RecordInput): void {
     }
   }
   db.prepare(
-    `INSERT INTO activity (id, book_id, spread_id, actor_type, actor_name, action, summary, snapshot, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO activity (id, book_id, spread_id, character_id, actor_type, actor_name, action, summary, snapshot, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     newId(),
     input.bookId,
     spreadId,
+    characterId,
     input.actor.type,
     input.actor.name,
     input.action,
@@ -84,6 +100,7 @@ function toEntry(row: ActivityRow): ActivityEntry {
     id: row.id,
     bookId: row.book_id,
     spreadId: row.spread_id,
+    characterId: row.character_id,
     actor: { type: row.actor_type, name: row.actor_name },
     action: row.action,
     summary: row.summary,

@@ -37,11 +37,21 @@ export interface SpreadRow {
   text_valign: TextValign | null;
   text_size_pt: number | null;
   page_color: string | null;
+  character_ids: string;
   created_at: string;
   updated_at: string;
   updated_by_type: ActorType;
   updated_by_name: string;
   version: number;
+}
+
+export function parseIds(json: string | null | undefined): string[] {
+  try {
+    const value = JSON.parse(json ?? "[]") as unknown;
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export function parseTypography(json: string): Typography {
@@ -82,6 +92,7 @@ export function toSpread(row: SpreadRow, assets: Map<string, AssetRef>): Spread 
     textValign: row.text_valign,
     textSizePt: row.text_size_pt,
     pageColor: row.page_color,
+    characterIds: parseIds(row.character_ids),
     updatedAt: row.updated_at,
     updatedBy: { type: row.updated_by_type, name: row.updated_by_name },
     version: row.version,

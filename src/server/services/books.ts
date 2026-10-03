@@ -17,6 +17,7 @@ import { publish } from "../events";
 import type { Actor } from "../http";
 import { badRequest, HttpError, newId, notFound, nowIso } from "../util";
 import { getActivityRow, recordActivity } from "./activity";
+import { listCharacters, restoreCharacterSnapshot, validCharacterIds } from "./characters";
 import { fontKeyExists } from "./fonts";
 import { assetUrls, type BookRow, loadAssetRefs, parseTypography, type SpreadRow, toSpread } from "./rows";
 
@@ -98,6 +99,8 @@ export const updateSpreadSchema = z
     textValign: z.enum(TEXT_VALIGNS).nullable(),
     textSizePt: z.number().min(6).max(96).nullable(),
     pageColor: hex.nullable(),
+    /** Characters present on the spread (ids from book.characters). */
+    characterIds: z.array(z.string().max(40)).max(50),
     /** Optimistic concurrency: the version the writer last saw. */
     baseVersion: z.number().int().optional(),
   })
@@ -162,6 +165,7 @@ export function getBook(id: string): Book {
     archivedAt: row.archived_at,
     version: row.version,
     spreads,
+    characters: listCharacters(id),
     wordCount: spreads.reduce((n, s) => n + s.wordCount, 0),
     openRequests: openRequests(id),
   };
@@ -237,11 +241,12 @@ function insertSpreadRow(row: SpreadRow): void {
   getDb()
     .prepare(
       `INSERT INTO spreads (id, book_id, position, text, illustration_asset_id, illustration_brief, illustration_fit, notes,
-        text_align, text_valign, text_size_pt, page_color, created_at, updated_at, updated_by_type, updated_by_name, version)
+        text_align, text_valign, text_size_pt, page_color, character_ids, created_at, updated_at, updated_by_type, updated_by_name, version)
        VALUES (@id, @book_id, @position, @text, @illustration_asset_id, @illustration_brief, @illustration_fit, @notes,
-        @text_align, @text_valign, @text_size_pt, @page_color, @created_at, @updated_at, @updated_by_type, @updated_by_name, @version)`,
+        @text_align, @text_valign, @text_size_pt, @page_color, @character_ids, @created_at, @updated_at, @updated_by_type, @updated_by_name, @version)`,
     )
-    .run(row);
+    // Snapshots taken before migration 2 have no character_ids.
+    .run({ ...row, character_ids: row.character_ids ?? "[]" });
 }
 
 function blankSpread(bookId: string, position: number, actor: Actor): SpreadRow {
@@ -259,6 +264,7 @@ function blankSpread(bookId: string, position: number, actor: Actor): SpreadRow 
     text_valign: null,
     text_size_pt: null,
     page_color: null,
+    character_ids: "[]",
     created_at: now,
     updated_at: now,
     updated_by_type: actor.type,
@@ -416,6 +422,7 @@ const SPREAD_LABELS: Record<string, string> = {
   textValign: "mise en page",
   textSizePt: "mise en page",
   pageColor: "mise en page",
+  characterIds: "personnages",
 };
 
 export function updateSpread(
@@ -431,7 +438,11 @@ export function updateSpread(
       current: getSpread(bookId, spreadId),
     });
   }
-  const { baseVersion: _ignored, ...fields } = patch;
+  const { baseVersion: _ignored, characterIds, ...rest } = patch;
+  const fields = {
+    ...rest,
+    characterIds: characterIds === undefined ? undefined : JSON.stringify(validCharacterIds(bookId, characterIds)),
+  };
   const changed = Object.entries(fields).filter(([k, v]) => {
     const col = COLUMN_OF[k];
     return col !== undefined && v !== undefined && before[col] !== v;
@@ -462,6 +473,7 @@ const COLUMN_OF: Record<string, keyof SpreadRow> = {
   textValign: "text_valign",
   textSizePt: "text_size_pt",
   pageColor: "page_color",
+  characterIds: "character_ids",
 };
 
 function writeSpread(row: SpreadRow): void {
@@ -469,10 +481,10 @@ function writeSpread(row: SpreadRow): void {
     .prepare(
       `UPDATE spreads SET text=@text, illustration_asset_id=@illustration_asset_id, illustration_brief=@illustration_brief,
         illustration_fit=@illustration_fit, notes=@notes, text_align=@text_align, text_valign=@text_valign,
-        text_size_pt=@text_size_pt, page_color=@page_color, updated_at=@updated_at, updated_by_type=@updated_by_type,
-        updated_by_name=@updated_by_name, version=@version WHERE id=@id`,
+        text_size_pt=@text_size_pt, page_color=@page_color, character_ids=@character_ids, updated_at=@updated_at,
+        updated_by_type=@updated_by_type, updated_by_name=@updated_by_name, version=@version WHERE id=@id`,
     )
-    .run(row);
+    .run({ ...row, character_ids: row.character_ids ?? "[]" });
 }
 
 export function setIllustration(bookId: string, spreadId: string, asset: AssetRow | null, actor: Actor): Spread {
@@ -583,6 +595,8 @@ export function restoreActivity(activityId: string, actor: Actor): Book {
       const stmt = db.prepare("UPDATE spreads SET position = ? WHERE id = ?");
       [...order, ...rest].forEach((id, i) => stmt.run(i, id));
       recordActivity({ bookId, actor, action: "spread.reorder", labels: [`ordre restauré (version du ${when})`], snapshot: current });
+    } else if (entry.action === "character.update" || entry.action === "character.delete") {
+      restoreCharacterSnapshot(bookId, snapshot, when, actor);
     } else {
       throw badRequest("Cette entrée d'historique ne se restaure pas.");
     }

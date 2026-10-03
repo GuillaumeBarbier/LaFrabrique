@@ -16,14 +16,24 @@ export function migrate(db: DB): void {
   );
   for (const m of MIGRATIONS) {
     if (applied.has(m.version)) continue;
-    db.transaction(() => {
-      db.exec(m.sql);
-      db.prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)").run(
-        m.version,
-        m.name,
-        new Date().toISOString(),
-      );
-    })();
+    // SQLite ignores this pragma inside a transaction: switch it around the migration.
+    if (m.rebuildsTables) db.pragma("foreign_keys = OFF");
+    try {
+      db.transaction(() => {
+        db.exec(m.sql);
+        if (m.rebuildsTables) {
+          const broken = db.pragma("foreign_key_check") as unknown[];
+          if (broken.length > 0) throw new Error(`Migration ${m.version}: ${broken.length} broken foreign key(s)`);
+        }
+        db.prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)").run(
+          m.version,
+          m.name,
+          new Date().toISOString(),
+        );
+      })();
+    } finally {
+      if (m.rebuildsTables) db.pragma("foreign_keys = ON");
+    }
   }
 }
 

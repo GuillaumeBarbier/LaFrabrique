@@ -7,7 +7,7 @@ import { dataDir, getDb } from "./db";
 import type { Actor } from "./http";
 import { badRequest, HttpError, newId, notFound, nowIso, sha256 } from "./util";
 
-export type AssetKind = "illustration" | "cover" | "font";
+export type AssetKind = "illustration" | "cover" | "font" | "character";
 export type AssetSize = "original" | "print" | "web" | "thumb";
 
 export interface AssetRow {
@@ -67,7 +67,7 @@ export function assetFilePath(asset: AssetRow, size: AssetSize): { file: string;
  */
 export async function storeImage(
   buffer: Buffer,
-  input: { kind: "illustration" | "cover"; bookId: string; originalName?: string | null; actor: Actor },
+  input: { kind: "illustration" | "cover" | "character"; bookId: string; originalName?: string | null; actor: Actor },
 ): Promise<AssetRow> {
   if (buffer.length === 0) throw badRequest("Fichier vide.");
   if (buffer.length > MAX_IMAGE_BYTES) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
@@ -128,8 +128,15 @@ export function deleteAssetFiles(ids: string[]): void {
   for (const id of ids) fs.rmSync(assetDir(id), { recursive: true, force: true });
 }
 
+export interface ImageUpload {
+  buffer: Buffer;
+  name: string | null;
+  /** Other text fields of the form or the JSON body (e.g. a reference's label). */
+  fields: Record<string, string | boolean>;
+}
+
 /** Image bytes from an upload: multipart `file`, or JSON `{ base64 }` / `{ url }` (agents). */
-export async function readImageUpload(req: Request): Promise<{ buffer: Buffer; name: string | null }> {
+export async function readImageUpload(req: Request): Promise<ImageUpload> {
   const type = req.headers.get("content-type") ?? "";
   const declared = Number(req.headers.get("content-length") ?? 0);
   if (declared > MAX_IMAGE_BYTES * 1.4) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
@@ -137,16 +144,22 @@ export async function readImageUpload(req: Request): Promise<{ buffer: Buffer; n
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) throw badRequest("Champ « file » manquant.");
-    return { buffer: Buffer.from(await file.arrayBuffer()), name: file.name || null };
+    const fields: Record<string, string> = {};
+    for (const [k, v] of form.entries()) if (typeof v === "string") fields[k] = v;
+    return { buffer: Buffer.from(await file.arrayBuffer()), name: file.name || null, fields };
   }
   if (type.startsWith("application/json")) {
-    const body = (await req.json()) as { base64?: unknown; url?: unknown; name?: unknown };
+    const body = (await req.json()) as Record<string, unknown>;
     const name = typeof body.name === "string" ? body.name : null;
-    if (typeof body.base64 === "string") return { buffer: decodeBase64(body.base64), name };
-    if (typeof body.url === "string") return { buffer: await fetchImage(body.url), name: name ?? body.url.split("/").pop() ?? null };
+    const fields: Record<string, string | boolean> = {};
+    for (const [k, v] of Object.entries(body)) if ((typeof v === "string" || typeof v === "boolean") && k !== "base64") fields[k] = v;
+    if (typeof body.base64 === "string") return { buffer: decodeBase64(body.base64), name, fields };
+    if (typeof body.url === "string") {
+      return { buffer: await fetchImage(body.url), name: name ?? body.url.split("/").pop() ?? null, fields };
+    }
     throw badRequest("JSON attendu : { base64 } ou { url }.");
   }
-  if (type.startsWith("image/")) return { buffer: Buffer.from(await req.arrayBuffer()), name: null };
+  if (type.startsWith("image/")) return { buffer: Buffer.from(await req.arrayBuffer()), name: null, fields: {} };
   throw badRequest("Envoyer un fichier (multipart « file »), une image brute, ou du JSON { base64 | url }.");
 }
 

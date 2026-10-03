@@ -4,6 +4,8 @@ export interface Migration {
   version: number;
   name: string;
   sql: string;
+  /** Rebuilds a table other tables point to: run with foreign keys off, checked before commit. */
+  rebuildsTables?: boolean;
 }
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -136,6 +138,72 @@ export const MIGRATIONS: readonly Migration[] = [
         updated_at TEXT NOT NULL
       );
       CREATE INDEX activity_book ON activity(book_id, updated_at);
+    `,
+  },
+  {
+    version: 2,
+    name: "characters",
+    rebuildsTables: true,
+    sql: `
+      -- Reference images of characters are assets too: widen the allowed kinds.
+      CREATE TABLE assets_new (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL CHECK (kind IN ('illustration', 'cover', 'font', 'character')),
+        book_id TEXT,
+        original_name TEXT,
+        mime TEXT NOT NULL,
+        ext TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        width INTEGER,
+        height INTEGER,
+        sha256 TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        created_by_type TEXT NOT NULL,
+        created_by_name TEXT NOT NULL
+      );
+      INSERT INTO assets_new SELECT * FROM assets;
+      DROP TABLE assets;
+      ALTER TABLE assets_new RENAME TO assets;
+
+      CREATE TABLE characters (
+        id TEXT PRIMARY KEY,
+        book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT '',
+        appearance TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        updated_by_type TEXT NOT NULL,
+        updated_by_name TEXT NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      );
+      CREATE INDEX characters_book ON characters(book_id, position);
+
+      CREATE TABLE character_images (
+        id TEXT PRIMARY KEY,
+        character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+        asset_id TEXT NOT NULL REFERENCES assets(id),
+        label TEXT NOT NULL DEFAULT '',
+        is_primary INTEGER NOT NULL DEFAULT 0,
+        position INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        created_by_type TEXT NOT NULL,
+        created_by_name TEXT NOT NULL
+      );
+      CREATE INDEX character_images_character ON character_images(character_id, position);
+
+      -- Characters present on a spread: JSON array of ids, versioned and restored with the spread.
+      ALTER TABLE spreads ADD COLUMN character_ids TEXT NOT NULL DEFAULT '[]';
+
+      -- History of a character's sheet, next to the spread's.
+      ALTER TABLE activity ADD COLUMN character_id TEXT;
+
+      -- Server-side settings (signing secret of temporary links…).
+      CREATE TABLE settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
     `,
   },
 ];

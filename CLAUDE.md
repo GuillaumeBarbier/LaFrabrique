@@ -4,7 +4,7 @@
 La Fabrique : atelier web où Guillaume et un agent IA créent des livres pour enfants (illustration à gauche, texte à droite). Outil personnel, auto-hébergé sur `lafabrique.guillaume-barbier.com`. Commencer par `README.md`, puis `docs/01-feuille-de-route.md` (file de travail), `docs/02-suivi.md` (journal et retours) et `docs/03-actions-guillaume.md`.
 
 ## Règles
-- **Pousser sur `main`** par petits commits fréquents, messages en français. Pas de PR sauf demande explicite. (Si la session impose une autre branche, suivre la consigne de la session.)
+- **Pousser systématiquement sur `main`** (consigne de Guillaume du 03/10/2026 : un push sur `main` part en déploiement), même si la session propose une branche `claude/…`. Petits commits fréquents, messages en français. Pas de PR sauf demande explicite.
 - **Sobriété** : au plus 2 agents en parallèle, une session = une tâche de la feuille de route.
 - Docs en français ; code, identifiants et commentaires techniques en anglais.
 - **Tutoyer Guillaume** dans les réponses et les documents qui s'adressent à lui. L'interface reste neutre (infinitifs : « Créer un livre », « Enregistrer »).
