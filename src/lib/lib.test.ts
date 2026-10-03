@@ -17,8 +17,8 @@ describe("book helpers", () => {
 
   it("computes print resolution with bleed", () => {
     const format = getFormat("square-200");
-    expect(requiredPixels(format)).toEqual({ width: 2433, height: 2433 });
-    expect(effectiveDpi(format, 2433, 2433)).toBe(300);
+    expect(requiredPixels(format)).toEqual({ width: 2434, height: 2434 });
+    expect(effectiveDpi(format, 2434, 2434)).toBe(300);
     expect(effectiveDpi(format, 1200, 2433)).toBeLessThan(300);
   });
 });
