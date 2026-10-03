@@ -19,7 +19,7 @@ Image testée le 03/10/2026 : construction, premier compte avec `SETUP_TOKEN`, b
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `DATA_DIR` | `/data` | Base SQLite, illustrations, polices |
-| `APP_URL` | déduite de la requête | Adresse affichée dans les instructions de connexion des agents |
+| `APP_URL` | déduite de la requête | **Obligatoire en production** : adresse publique exacte. Sert d'émetteur OAuth et de ressource MCP (le connecteur claude.ai échoue si elle ne correspond pas à l'URL saisie), et figure dans les instructions de connexion |
 | `SETUP_TOKEN` | vide | Si posé, exigé pour créer le premier compte. À vider une fois le compte créé |
 | `PORT` | `3000` | Port d'écoute dans le conteneur |
 

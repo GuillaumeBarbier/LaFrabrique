@@ -36,9 +36,20 @@ claude mcp add --transport http lafabrique https://lafabrique.guillaume-barbier.
 }
 ```
 
-### claude.ai (web, mobile)
+### claude.ai, Claude Desktop, mobile (OAuth, [ADR-0007](../decisions/0007-connecteur-oauth.md))
 
-Pas encore : les connecteurs personnalisés de claude.ai n'envoient pas d'en-tête. Il faut un OAuth minimal (tâche F2.8).
+1. claude.ai › Paramètres › Connecteurs › **Ajouter un connecteur personnalisé** (aussi depuis Claude Desktop ; il apparaît ensuite sur le mobile).
+2. Nom : `La Fabrique`. URL : `https://lafabrique.guillaume-barbier.com/api/mcp`. Rien d'autre (pas d'identifiant client à saisir).
+3. « Se connecter » : La Fabrique ouvre sa page de connexion puis d'accord ; choisir le **nom de l'agent** (il signera son travail) et sa **portée**.
+
+La connexion apparaît dans Paramètres › Agents IA › Connexions OAuth, révocable à tout moment.
+
+### Claude Code sans clé (OAuth)
+
+```bash
+claude mcp add --transport http lafabrique https://lafabrique.guillaume-barbier.com/api/mcp
+# puis, dans Claude Code : /mcp → lafabrique → s'authentifier (le navigateur s'ouvre)
+```
 
 ### Tout autre agent : REST
 
@@ -150,3 +161,19 @@ Réponse (extrait) :
 ```
 
 Les images de référence acceptent les mêmes formats que les illustrations ; un fond transparent (PNG, WebP) est conservé. Les liens signés expirent : les redemander à chaque séance de travail.
+
+## 9. OAuth (pour qui écrit un client)
+
+| Élément | Valeur |
+|---|---|
+| Ressource protégée | `https://lafabrique.guillaume-barbier.com/api/mcp` |
+| Métadonnées de la ressource | `/.well-known/oauth-protected-resource/api/mcp` (et sans le chemin) |
+| Métadonnées du serveur | `/.well-known/oauth-authorization-server` |
+| Autorisation | `/oauth/autoriser` (code + PKCE S256 obligatoire, `resource` facultatif mais vérifié) |
+| Jetons | `POST /api/oauth/token` (formulaire) : `authorization_code`, `refresh_token` |
+| Enregistrement | `POST /api/oauth/register` (RFC 7591, JSON) ; ou `client_id` = URL d'un document CIMD |
+| Révocation | `POST /api/oauth/revoke` (RFC 7009) |
+| Portées | `read`, `write` (choisie par l'humain à l'accord ; `offline_access` accepté et ignoré) |
+| Durées | code 10 min, accès 1 h, rafraîchissement 60 jours à usage unique (rotation) |
+
+Les jetons OAuth n'ouvrent que le serveur MCP. Pour l'API REST, utiliser une clé.

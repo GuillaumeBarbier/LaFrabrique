@@ -36,7 +36,9 @@ Les données (base SQLite, illustrations, polices) vont dans `./data` (variable 
 
 ## Connecter un agent
 
-Paramètres › Agents IA › « Créer une clé ». Puis, pour Claude Code :
+**claude.ai, Claude Desktop, mobile** : Paramètres › Connecteurs › Ajouter un connecteur personnalisé, URL `https://lafabrique.guillaume-barbier.com/api/mcp`, puis « Se connecter » (OAuth).
+
+**Avec une clé** (Claude Code, scripts) : Paramètres › Agents IA › « Créer une clé ». Puis, pour Claude Code :
 
 ```bash
 claude mcp add --transport http lafabrique https://lafabrique.guillaume-barbier.com/api/mcp \

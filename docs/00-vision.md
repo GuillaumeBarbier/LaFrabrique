@@ -39,7 +39,7 @@ Un atelier où Guillaume et un agent IA écrivent, illustrent et mettent en page
 | 9 | **Mode lecture** plein écran (feuilleter au clavier ou au doigt) | Relire comme un enfant le lira | 1 |
 | 10 | **Impression PDF** à la taille réelle, page de titre en recto | Premier export utile ; pagination correcte pour l'imprimeur | 1 |
 | 11 | **Clés API à portée** (lecture / écriture), révocables, dernière utilisation | Sécurité ; un agent de relecture n'a pas besoin d'écrire | 1 |
-| 12 | **Serveur MCP** | Brancher Claude (Code, Desktop, Cowork) sans écrire de code | 1 |
+| 12 | **Serveur MCP** (clé, puis OAuth pour claude.ai le 03/10) | Brancher Claude (claude.ai, Desktop, mobile, Code, Cowork) sans écrire de code | 1 |
 | 13 | **Compteur de mots** par page et total, cible selon l'âge | Repère classique de l'album jeunesse | 1 |
 | 14 | **Langue du livre** (césure, typographie française) | Guillemets, espaces fines, coupures de mots | 1 |
 | 15 | **Thème clair / sombre** de l'interface | Confort de travail le soir | 1 |

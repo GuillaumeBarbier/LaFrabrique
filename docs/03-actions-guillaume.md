@@ -19,12 +19,17 @@
 - [ ] **Essayer l'espace « Personnages »** (cinq minutes, une fois le déploiement passé) : dans un livre, entrée « Personnages » en haut des vignettes ; créer une fiche, déposer une ou deux images de référence et les légender (« face », « profil »…) ; cocher le personnage sur une double page (onglet Page). Puis demander à ton agent qui illustre d'appeler `get_references` avec la double page : il doit voir l'image et recevoir des liens `signedUrl`. Dis-moi si un générateur d'images refuse ces liens.
 - [ ] **Agent déjà connecté par MCP** : le relancer (ou rouvrir la conversation) pour qu'il voie les nouveaux outils et les consignes mises à jour.
 
+## Connecteur claude.ai (03/10, F2.8)
+
+- [ ] **Vérifier `APP_URL`** sur le serveur : elle doit valoir exactement `https://lafabrique.guillaume-barbier.com` (déjà dans le script NAS et le compose VPS ; si tu as lancé le conteneur autrement, l'ajouter). Sinon claude.ai refuse la connexion.
+- [ ] **Ajouter le connecteur** (deux minutes, une fois le déploiement passé) : claude.ai › Paramètres › Connecteurs › Ajouter un connecteur personnalisé ; nom `La Fabrique` ; URL `https://lafabrique.guillaume-barbier.com/api/mcp` ; rien dans les champs OAuth avancés ; « Se connecter » ; dans La Fabrique, choisir le nom de l'agent (par ex. « Claude ») et « Lire et écrire ». Puis dans une conversation : « Liste mes livres La Fabrique ». Dis-moi si une étape coince (message exact).
+- [ ] **Ensuite**, la clé API créée pour tes premiers essais peut rester (Claude Code, scripts) ou être révoquée si tout passe par le connecteur.
+
 ## Décisions produit (valeurs par défaut appliquées en attendant)
 
 - [ ] **Couleur d'accent de l'interface** : or `#EFBF04` de Pro-Resa. Une autre couleur se change en une ligne (`src/styles/tokens.css`). L'agent a sa propre couleur, violette, pour qu'on voie ce qu'il fait.
 - [ ] **Format par défaut d'un nouveau livre** : carré 20 × 20 cm. Proposés aussi : 15 × 15, 21,6 × 21,6 (8,5″ KDP), 25 × 25, 21 × 28 portrait, 28 × 21 paysage. Un format manque ?
 - [ ] **Imprimeur visé** (imprimeur local, Lulu, KDP…) : conditionne l'export de la phase 4 (fonds perdus, PDF/X, dos de couverture). En attendant : PDF du navigateur, à taille réelle, fonds perdus 3 mm en option.
 - [ ] **Génération intégrée (phase 3)** : veux-tu générer les illustrations *dans* La Fabrique (fournisseur à choisir : OpenAI, Google, fal/Flux…, avec ta clé), ou l'agent externe suffit-il ? Même question pour l'aide à l'écriture (clé Anthropic).
-- [ ] **claude.ai web/mobile** : veux-tu brancher La Fabrique comme connecteur dans claude.ai (et pas seulement Claude Code / Desktop) ? Cela demande un petit OAuth (F2.8).
 - [ ] **D'autres personnes** (famille, illustrateur) auront-elles un compte ? *Par défaut : un seul compte humain, des agents par clé.*
 - [ ] **Mise en forme du texte** : as-tu besoin de mots en gras, en couleur ou en grand dans le texte (fréquent en album) ? Si oui, on le prévoit avec F2.6.

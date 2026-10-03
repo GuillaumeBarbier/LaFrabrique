@@ -7,7 +7,7 @@
 ```
 Navigateur (Guillaume) ──cookie──┐
                                  ├──► Next.js (un processus) ──► SQLite  DATA_DIR/lafabrique.db
-Agent (Claude…) ──Bearer lfab_──┘        │  /api/v1  REST            fichiers DATA_DIR/assets/<id>/
+Agent (Claude…) ──Bearer lfab_ / lfat_──┘        │  /api/v1  REST            fichiers DATA_DIR/assets/<id>/
                                          │  /api/mcp  MCP (HTTP)
                                          │  /api/v1/books/{id}/events  SSE (direct)
                                          └  pages : bibliothèque, éditeur, lecture, impression, paramètres
@@ -53,7 +53,7 @@ src/
 
 ## Données
 
-Tables : `users`, `sessions`, `api_keys`, `books`, `spreads`, `characters`, `character_images`, `assets`, `fonts`, `comments`, `activity`, `settings`, `schema_migrations`. Schéma : [`src/server/db/migrations.ts`](../../src/server/db/migrations.ts).
+Tables : `users`, `sessions`, `api_keys`, `oauth_clients`, `oauth_codes`, `oauth_grants`, `oauth_tokens`, `books`, `spreads`, `characters`, `character_images`, `assets`, `fonts`, `comments`, `activity`, `settings`, `schema_migrations`. Schéma : [`src/server/db/migrations.ts`](../../src/server/db/migrations.ts).
 
 - **Une seule source de vérité par écriture** : chaque modification passe par un service qui écrit la ligne, l'historique (`activity`, avec l'état d'avant en JSON) et publie un événement.
 - **Concurrence** : chaque double page a un `version`. L'éditeur et les agents envoient `baseVersion` ; un écart renvoie `409` avec la version actuelle. L'éditeur propose alors « garder la mienne / prendre la sienne ».
@@ -65,6 +65,7 @@ Tables : `users`, `sessions`, `api_keys`, `books`, `spreads`, `characters`, `cha
 - Premier compte : créé au premier lancement ; `SETUP_TOKEN` peut l'exiger (instance exposée avant création du compte).
 - Mutations par cookie : en-tête `Origin` vérifié (en plus de `SameSite`).
 - Clés API : `lfab_` + 240 bits, hachées SHA-256, révocables.
+- OAuth ([ADR-0007](../decisions/0007-connecteur-oauth.md)) : La Fabrique est son propre serveur d'autorisation (code + PKCE S256, CIMD ou DCR) ; jetons opaques hachés, accès 1 h limité à `/api/mcp`, rafraîchissement à usage unique (rejeu = connexion révoquée) ; consentement par l'humain connecté, qui nomme l'agent et choisit sa portée.
 - Liens temporaires d'images ([ADR-0006](../decisions/0006-personnages-et-references.md)) : HMAC-SHA256 (image, taille, expiration) avec un secret de 256 bits tiré au premier usage et gardé dans `settings` ; 24 h ; un lien falsifié ou expiré renvoie 403.
 - Téléversements : signature binaire vérifiée (images par `sharp`, polices par leur en-tête), SVG refusé, tailles plafonnées ; URL d'image : https publique uniquement, résolution DNS vérifiée (pas d'adresse privée), pas de redirection.
 - En-têtes : `X-Robots-Tag: noindex`, `robots.txt` fermé, `X-Frame-Options: DENY`, `nosniff`.

@@ -11,6 +11,13 @@
 
 ## Journal
 
+### 2026-10-03 — Session Claude : connecteur OAuth (F2.8)
+
+- **Demande** de Guillaume : brancher La Fabrique comme connecteur OAuth (claude.ai, Desktop, mobile).
+- **Fait** ([ADR-0007](decisions/0007-connecteur-oauth.md)) : serveur d'autorisation OAuth 2.1 intégré — 401 avec `resource_metadata`, `/.well-known/oauth-protected-resource` et `/.well-known/oauth-authorization-server`, CIMD (préféré par Claude) et enregistrement dynamique, page d'accord `/oauth/autoriser` (connexion d'abord, nom de l'agent, portée, avertissement pour une appli locale), PKCE S256, `resource` vérifié, jetons opaques hachés (accès 1 h limité à `/api/mcp`, rafraîchissement à usage unique, rejeu = révocation), révocation RFC 7009 ; « Connexions OAuth » et mode d'emploi claude.ai dans Paramètres › Agents IA ; retour à la page demandée après connexion.
+- **Vérifié** : 32 tests (dont un vrai bug corrigé : la révocation sur rejeu était annulée avec la transaction) ; parcours complet avec le client MCP officiel (découverte, enregistrement, accord dans Chromium, jetons, appel d'outil signé du nom choisi, rafraîchissement automatique) ; document CIMD réel de Claude Code conforme à la validation.
+- **Ensuite** : Guillaume ajoute le connecteur dans claude.ai (voir actions) ; F1.13.
+
 ### 2026-10-03 — Session Claude : personnages (F2.1)
 
 - **Demande** de Guillaume, après ses premiers essais avec un agent : partager les illustrations des personnages pour des images cohérentes d'une page à l'autre.
@@ -36,12 +43,14 @@
 | R-04 | 03/10 | Claude | Les tests navigateur de la session vivent hors dépôt (bloc-notes de session). À reprendre en vrais tests Playwright (F2.9) : connexion, saisie + enregistrement, conflit, direct, téléversement. | pris (F2.9) |
 | R-05 | 03/10 | Claude | Les fichiers remplacés ne sont jamais supprimés (la restauration en a besoin) : le dossier de données grossit avec les itérations d'illustrations. | pris (F2.10) |
 | R-06 | 03/10 | Claude | Un lien signé `signedUrl` reste valable 24 h même si la clé de l'agent est révoquée entre-temps : à garder en tête si une clé fuit (révoquer suffit pour l'API, pas pour les liens déjà émis). Faire tourner le secret = supprimer la ligne `signing_secret` de `settings`. | ouvert |
+| R-08 | 03/10 | Claude | Le document CIMD d'un client est lu sans suivre de redirection (anti-SSRF). Si Anthropic déplaçait ses documents derrière une redirection (claude.ai → claude.com), l'accord échouerait avec « Document du client illisible » : autoriser alors les redirections vers des hôtes publics. | ouvert |
+| R-09 | 03/10 | Claude | Les connexions OAuth expirées ou révoquées restent listées dans Paramètres (traçabilité). Un bouton « Effacer » viendra si la liste s'allonge. | ouvert |
 | R-07 | 03/10 | Claude | La suppression d'un personnage le retire des doubles pages sans changer leur `version` (nettoyage dérivé, pour ne pas provoquer de faux conflits) ; la restauration le remet sur ces pages. | fait |
 
 ## Points ouverts
 
 | ID | Question | Piste | Statut |
 |---|---|---|---|
-| Q-01 | claude.ai (web, app) n'accepte pas de clé en en-tête pour un connecteur MCP personnalisé | OAuth minimal sur `/api/mcp` (F2.8) ou passer par Claude Code / Claude Desktop | ouvert |
+| Q-01 | claude.ai (web, app) n'accepte pas de clé en en-tête pour un connecteur MCP personnalisé | OAuth sur `/api/mcp` (F2.8, ADR-0007) | fait |
 | Q-02 | Le texte est brut (paragraphes). Mettre un mot en gras ou en grand demandera un format (Markdown léger ? segments ?) lisible par l'agent | À trancher avec F2.6, nouvelle ADR | ouvert |
 | Q-03 | L'impression passe par « Enregistrer en PDF » du navigateur : texte vectoriel et polices embarquées, mais pas de PDF/X ni de traits de coupe | Export serveur en phase 4 (F4.1) selon l'imprimeur choisi | ouvert |

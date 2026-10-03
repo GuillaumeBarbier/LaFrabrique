@@ -47,7 +47,7 @@
 - [ ] **F2.5 — Mode suggestion** : l'agent propose un texte sur une page, l'humain accepte ou refuse ; réglable par clé (« écrire directement » / « proposer »).
 - [ ] **F2.6 — Confort d'édition** : glisser-déposer des vignettes, raccourcis clavier, zoom, mise en forme légère du texte (gras, italique, mots en grand).
 - [ ] **F2.7 — Second facteur** (TOTP, codes de secours) si l'outil reste exposé sur Internet.
-- [ ] **F2.8 — Connecteur claude.ai** : OAuth sur le serveur MCP pour l'ajouter comme connecteur personnalisé dans claude.ai (le web et l'app ne savent pas envoyer une clé en en-tête). ⏸ besoin à confirmer.
+- [x] **F2.8 — Connecteur claude.ai** (demandé par Guillaume le 03/10, [ADR-0007](decisions/0007-connecteur-oauth.md)) : OAuth 2.1 sur le serveur MCP — découverte, CIMD et enregistrement dynamique, consentement qui nomme l'agent et fixe sa portée, PKCE, rotation des jetons, connexions révocables dans Paramètres. Testé de bout en bout avec le client MCP officiel.
 - [ ] **F2.9 — Tests de bout en bout** (Playwright) des parcours bibliothèque → éditeur → impression. Le script de la session de lancement (connexion, saisie, conflit, direct, téléversement) peut servir de point de départ ([`02-suivi.md`](02-suivi.md), R-04).
 - [ ] **F2.10 — Ménage des fichiers** : illustrations remplacées et jamais restaurées (aujourd'hui gardées pour l'historique), après 90 jours.
 
