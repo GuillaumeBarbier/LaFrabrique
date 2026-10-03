@@ -4,7 +4,7 @@
 
 ## Pour mettre en ligne (bloquant pour F1.13)
 
-- [ ] **Créer la branche `main`** depuis `claude/modest-cerf-f9nqik` et la mettre par défaut (GitHub › Settings › General › Default branch). Le dépôt était vide : la branche de la session est devenue celle par défaut. La publication de l'image part des pushs sur `main`.
+- [x] **Créer la branche `main`** — fait le 03/10. Les sessions poussent désormais directement sur `main`. Si `claude/modest-cerf-f9nqik` est encore la branche par défaut sur GitHub, la remplacer par `main` (Settings › General › Default branch), puis supprimer l'ancienne branche.
 - [ ] **Choisir le serveur** — les deux sont prêts ([procédure](tech/03-deploiement.md)) :
   - **NAS** (ma recommandation) : `guillaume-barbier.com` y sert déjà To Do Love, les livres restent à la maison, Hyper Backup sauvegarde le dossier. Inconvénient : dépend de la connexion de la maison (l'agent doit joindre l'outil depuis Internet).
   - **VPS KVM4** (à côté de Pro-Resa) : toujours joignable, Traefik et GHCR déjà en place. Inconvénient : mélange un outil perso avec la prod de Pro-Resa.
@@ -12,7 +12,12 @@
 - [ ] **NAS seulement** : passer le paquet GHCR `lafabrique` en **Public** après le premier build vert (le KVM4, lui, est déjà connecté à GHCR). Avant de lancer la tâche DSM, vérifier la liste des applis surveillées par Watchtower : le script la remplace par `to-do-love lafabrique`.
 - [ ] **Premier lancement** : ouvrir l'adresse **juste après le déploiement** et créer ton compte (le premier visiteur crée le compte). Mieux : remplir `SETUP_TOKEN` dans le script NAS ou le `.env` du VPS, puis le vider une fois le compte créé.
 - [ ] **Minutes GitHub Actions** : si le quota du compte est épuisé (arrivé sur Pro-Resa), passer les deux workflows sur le runner du KVM4 (`runs-on: [self-hosted, kvm4]`, une ligne chacun) après l'avoir enregistré pour ce dépôt.
-- [ ] **Brancher Claude** une fois en ligne : Paramètres › Agents IA › « Créer une clé », puis la commande affichée dans Claude Code.
+- [x] **Brancher un agent** — fait le 03/10 (premiers essais concluants).
+
+## Personnages (03/10, F2.1)
+
+- [ ] **Essayer l'espace « Personnages »** (cinq minutes, une fois le déploiement passé) : dans un livre, entrée « Personnages » en haut des vignettes ; créer une fiche, déposer une ou deux images de référence et les légender (« face », « profil »…) ; cocher le personnage sur une double page (onglet Page). Puis demander à ton agent qui illustre d'appeler `get_references` avec la double page : il doit voir l'image et recevoir des liens `signedUrl`. Dis-moi si un générateur d'images refuse ces liens.
+- [ ] **Agent déjà connecté par MCP** : le relancer (ou rouvrir la conversation) pour qu'il voie les nouveaux outils et les consignes mises à jour.
 
 ## Décisions produit (valeurs par défaut appliquées en attendant)
 

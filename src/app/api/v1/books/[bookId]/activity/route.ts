@@ -10,6 +10,7 @@ export const GET = api<P>("read", ({ req, params }) => {
   return {
     activity: listActivity(params.bookId, {
       spreadId: url.searchParams.get("spreadId") ?? undefined,
+      characterId: url.searchParams.get("characterId") ?? undefined,
       limit: Number(url.searchParams.get("limit") ?? 100),
     }),
   };

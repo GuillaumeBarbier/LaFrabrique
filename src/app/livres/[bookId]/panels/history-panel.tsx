@@ -16,11 +16,13 @@ export function HistoryPanel({
   activity,
   onRestored,
   onSelectSpread,
+  onSelectCharacter,
 }: {
   book: Book;
   activity: ActivityEntry[];
   onRestored: (book: Book) => void;
   onSelectSpread: (id: string) => void;
+  onSelectCharacter: (id: string) => void;
 }) {
   const toast = useToast();
   const [who, setWho] = useState<Who>("all");
@@ -40,6 +42,7 @@ export function HistoryPanel({
   }
 
   const where = (a: ActivityEntry) => {
+    if (a.characterId) return book.characters.find((c) => c.id === a.characterId)?.name ?? "Personnage supprimé";
     if (!a.spreadId) return "Livre";
     const i = book.spreads.findIndex((s) => s.id === a.spreadId);
     return i >= 0 ? `Double page ${i + 1}` : "Page supprimée";
@@ -70,7 +73,11 @@ export function HistoryPanel({
                   <strong>{a.actor.name}</strong> · {a.summary}
                 </span>
                 <span className={styles.msgTime}>
-                  {a.spreadId && book.spreads.some((s) => s.id === a.spreadId) ? (
+                  {a.characterId && book.characters.some((c) => c.id === a.characterId) ? (
+                    <button type="button" className={styles.linkish} onClick={() => onSelectCharacter(a.characterId as string)}>
+                      {where(a)}
+                    </button>
+                  ) : a.spreadId && book.spreads.some((s) => s.id === a.spreadId) ? (
                     <button type="button" className={styles.linkish} onClick={() => onSelectSpread(a.spreadId as string)}>
                       {where(a)}
                     </button>

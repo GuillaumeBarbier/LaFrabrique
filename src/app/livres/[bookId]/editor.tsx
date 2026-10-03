@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Plus, Printer } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Plus, Printer, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { pageStyles, pageVars, SpreadView, CoverContent } from "@/components/book/pages";
 import { STATUS_TONES } from "@/components/book/status-badge";
@@ -11,6 +11,8 @@ import { useToast } from "@/components/ui/toast";
 import { BOOK_STATUSES, type BookStatus, getFormat, printedPageCount, STATUS_LABELS } from "@/lib/book";
 import { apiFetch, errorMessage, uploadFile } from "@/lib/client";
 import type { ActivityEntry, Book, Comment, CustomFont, Spread } from "@/lib/types";
+import { AvatarStack, CharacterBoard, CharacterPanel } from "./characters";
+import characterStyles from "./characters.module.css";
 import styles from "./editor.module.css";
 import { BookPanel } from "./panels/book-panel";
 import { CommentsPanel } from "./panels/comments-panel";
@@ -21,6 +23,7 @@ import { useBook } from "./use-book";
 
 type Tab = "page" | "book" | "comments" | "history";
 const COVER = "cover";
+const CHARACTERS = "characters";
 
 const STATUS_DOT: Record<string, string> = {
   neutral: "var(--color-text-3)",
@@ -41,9 +44,12 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; where: "before" | "after" } | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [chosenCharacter, setCharacter] = useState<string | null>(initial.characters[0]?.id ?? null);
 
   // A spread deleted elsewhere falls back to the first one (our own deletions pick a neighbour).
-  const selected = chosen === COVER || book.spreads.some((s) => s.id === chosen) ? chosen : (book.spreads[0]?.id ?? COVER);
+  const selected =
+    chosen === COVER || chosen === CHARACTERS || book.spreads.some((s) => s.id === chosen) ? chosen : (book.spreads[0]?.id ?? COVER);
+  const character = book.characters.find((c) => c.id === chosenCharacter) ?? book.characters[0] ?? null;
   const spread = book.spreads.find((s) => s.id === selected) ?? null;
   const index = spread ? book.spreads.indexOf(spread) : -1;
 
@@ -84,7 +90,7 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
       e.preventDefault();
-      const order = [COVER, ...book.spreads.map((s) => s.id)];
+      const order = [CHARACTERS, COVER, ...book.spreads.map((s) => s.id)];
       const i = order.indexOf(selected);
       const next = order[Math.min(Math.max(i + (e.key === "ArrowDown" ? 1 : -1), 0), order.length - 1)];
       if (next) setSelected(next);
@@ -155,12 +161,11 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
     }
   }
 
-  /** Restores the latest history entry of a spread (the "Annuler" of toasts). */
-  async function undoLast(spreadId?: string) {
+  /** Restores the latest history entry of a spread or a character (the "Annuler" of toasts). */
+  async function undoLast(spreadId?: string, characterId?: string) {
     try {
-      const { activity: entries } = await apiFetch<{ activity: ActivityEntry[] }>(
-        `/api/v1/books/${book.id}/activity?limit=1${spreadId ? `&spreadId=${spreadId}` : ""}`,
-      );
+      const filter = spreadId ? `&spreadId=${spreadId}` : characterId ? `&characterId=${characterId}` : "";
+      const { activity: entries } = await apiFetch<{ activity: ActivityEntry[] }>(`/api/v1/books/${book.id}/activity?limit=1${filter}`);
       const last = entries[0];
       if (!last?.restorable) return;
       applyBook(await apiFetch<Book>(`/api/v1/activity/${last.id}/restore`, { method: "POST" }));
@@ -256,6 +261,14 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
       <nav className={styles.rail} aria-label="Doubles pages">
         <ol className={styles.thumbList}>
           <li>
+            <button type="button" className={styles.thumb} aria-current={selected === CHARACTERS} onClick={() => setSelected(CHARACTERS)}>
+              <span className={characterStyles.railIcon}>
+                {book.characters.length > 0 ? <AvatarStack characters={book.characters} max={4} size={30} /> : <Users size={22} aria-hidden />}
+              </span>
+              <span className={styles.thumbMeta}>Personnages · {book.characters.length}</span>
+            </button>
+          </li>
+          <li>
             <button type="button" className={styles.thumb} aria-current={selected === COVER} onClick={() => setSelected(COVER)}>
               <div className={`${styles.thumbSpread} ${styles.coverThumb}`}>
                 <div className={`${pageStyles.page} ${pageStyles.single}`} style={pageVars(book.format, book.typography)}>
@@ -310,6 +323,7 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
                   </div>
                   <span className={styles.thumbMeta}>
                     {i + 1}
+                    <AvatarStack characters={book.characters.filter((c) => s.characterIds.includes(c.id))} size={16} />
                     <span className={styles.flag}>
                       {(commentsBySpread.get(s.id) ?? 0) > 0 && (
                         <span className={styles.flagDot} style={{ background: "var(--color-agent)" }} title="Échange ouvert" />
@@ -336,8 +350,13 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
         </Button>
       </nav>
 
-      <section className={styles.bench} aria-label="Plan de travail">
-        {selected === COVER || !spread ? (
+      <section className={styles.bench} aria-label="Plan de travail" data-mode={selected === CHARACTERS ? "characters" : undefined}>
+        {selected === CHARACTERS ? (
+          <CharacterBoard book={book} selectedId={character?.id ?? null} onSelect={(id) => {
+            setCharacter(id);
+            setTab("page");
+          }} onChanged={reload} />
+        ) : selected === COVER || !spread ? (
           <CoverCanvas book={book} uploading={uploading === COVER} onUpload={(f) => void uploadCover(f)} onRemove={() => void removeCover()} />
         ) : (
           <SpreadCanvas
@@ -358,13 +377,15 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
               tip="Précédente (Alt ↑)"
               tipUp
               icon={<ChevronLeft />}
-              disabled={selected === COVER}
-              onClick={() => setSelected(index <= 0 ? COVER : (book.spreads[index - 1]?.id ?? COVER))}
+              disabled={selected === CHARACTERS}
+              onClick={() => setSelected(selected === COVER ? CHARACTERS : index <= 0 ? COVER : (book.spreads[index - 1]?.id ?? COVER))}
             />
             <span>
-              {selected === COVER || !spread
-                ? `Couverture · ${coverFormat.label}`
-                : `Double page ${index + 1}/${book.spreads.length} · p. ${index * 2 + 2}–${index * 2 + 3}`}
+              {selected === CHARACTERS
+                ? `Personnages · ${book.characters.length}`
+                : selected === COVER || !spread
+                  ? `Couverture · ${coverFormat.label}`
+                  : `Double page ${index + 1}/${book.spreads.length} · p. ${index * 2 + 2}–${index * 2 + 3}`}
             </span>
             <Button
               variant="ghost"
@@ -373,8 +394,8 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
               tip="Suivante (Alt ↓)"
               tipUp
               icon={<ChevronRight />}
-              disabled={index >= book.spreads.length - 1}
-              onClick={() => setSelected(book.spreads[index + 1]?.id ?? selected)}
+              disabled={selected !== CHARACTERS && index >= book.spreads.length - 1}
+              onClick={() => setSelected(selected === CHARACTERS ? COVER : (book.spreads[index + 1]?.id ?? selected))}
             />
           </div>
         </div>
@@ -384,7 +405,7 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
         <div className={styles.tabs} role="tablist">
           {(
             [
-              { key: "page", label: selected === COVER ? "Couverture" : "Page" },
+              { key: "page", label: selected === CHARACTERS ? "Personnage" : selected === COVER ? "Couverture" : "Page" },
               { key: "book", label: "Livre" },
               { key: "comments", label: "Échanges", count: openForHuman },
               { key: "history", label: "Historique" },
@@ -410,7 +431,15 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
         </div>
         <div className={styles.panelBody} role="tabpanel">
           {tab === "page" &&
-            (spread && selected !== COVER ? (
+            (selected === CHARACTERS ? (
+              <CharacterPanel
+                book={book}
+                character={character}
+                onChanged={reload}
+                onUndo={(id) => void undoLast(undefined, id)}
+                onSelectSpread={(id) => setSelected(id)}
+              />
+            ) : spread && selected !== COVER ? (
               <PagePanel
                 book={book}
                 spread={spread}
@@ -422,6 +451,7 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
                 onMove={(d) => move(spread, d)}
                 onInsertAfter={() => void addSpreadAfter(index + 1)}
                 onAsk={() => setTab("comments")}
+                onOpenCharacters={() => setSelected(CHARACTERS)}
               />
             ) : (
               <BookPanel book={book} customFonts={customFonts} onUpdate={updateBook} only="cover" onUploadCover={(f) => void uploadCover(f)} onRemoveCover={() => void removeCover()} />
@@ -431,7 +461,7 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
             <CommentsPanel
               book={book}
               comments={comments}
-              currentSpread={spread && selected !== COVER ? spread : null}
+              currentSpread={spread && selected !== COVER && selected !== CHARACTERS ? spread : null}
               openForAgent={openForAgent}
               onChanged={loadComments}
               onSelectSpread={(id) => setSelected(id)}
@@ -446,6 +476,10 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
                 void loadActivity();
               }}
               onSelectSpread={(id) => setSelected(id)}
+              onSelectCharacter={(id) => {
+                setCharacter(id);
+                setSelected(CHARACTERS);
+              }}
             />
           )}
         </div>

@@ -39,7 +39,8 @@
 
 ## Phase 2 — Collaboration avancée
 
-- [ ] **F2.1 — Personnages** : fiche (nom, description, apparence, image de référence), exposée à l'agent (`get_book`, outils dédiés).
+- [x] **F2.1 — Personnages** (demandé par Guillaume le 03/10, [ADR-0006](decisions/0006-personnages-et-references.md)) : fiche (nom, rôle, apparence), images de référence étiquetées avec une principale, personnages présents par double page, `get_references` pour l'agent qui illustre avec liens temporaires 24 h, historique et restauration.
+- [ ] **F2.1b — Références de style** : planches d'ambiance et palette au niveau du livre, servies avec les personnages par `get_references`.
 - [ ] **F2.2 — Export / import ZIP d'un livre** : JSON + illustrations + polices utilisées ; import qui recrée le livre.
 - [ ] **F2.3 — Sauvegardes** : copie à chaud de la base (`VACUUM INTO`) + fichiers, rotation ; doc NAS (Hyper Backup) et VPS.
 - [ ] **F2.4 — Dupliquer un livre** (variante, traduction).

@@ -110,15 +110,21 @@ function toEntry(row: ActivityRow): ActivityEntry {
   };
 }
 
-export function listActivity(bookId: string, opts: { spreadId?: string; limit?: number } = {}): ActivityEntry[] {
+export function listActivity(bookId: string, opts: { spreadId?: string; characterId?: string; limit?: number } = {}): ActivityEntry[] {
   const limit = Math.min(Math.max(opts.limit ?? 100, 1), 500);
-  const rows = (
-    opts.spreadId
-      ? getDb()
-          .prepare("SELECT * FROM activity WHERE book_id = ? AND spread_id = ? ORDER BY updated_at DESC, rowid DESC LIMIT ?")
-          .all(bookId, opts.spreadId, limit)
-      : getDb().prepare("SELECT * FROM activity WHERE book_id = ? ORDER BY updated_at DESC, rowid DESC LIMIT ?").all(bookId, limit)
-  ) as ActivityRow[];
+  const where = ["book_id = ?"];
+  const params: (string | number)[] = [bookId];
+  if (opts.spreadId) {
+    where.push("spread_id = ?");
+    params.push(opts.spreadId);
+  }
+  if (opts.characterId) {
+    where.push("character_id = ?");
+    params.push(opts.characterId);
+  }
+  const rows = getDb()
+    .prepare(`SELECT * FROM activity WHERE ${where.join(" AND ")} ORDER BY updated_at DESC, rowid DESC LIMIT ?`)
+    .all(...params, limit) as ActivityRow[];
   return rows.map(toEntry);
 }
 

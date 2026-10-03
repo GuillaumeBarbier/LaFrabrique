@@ -1,0 +1,288 @@
+/* Characters: board on the workbench, sheet in the side panel, chips on each spread. */
+
+.board {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.boardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.boardTitle {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.newForm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 520px;
+}
+
+.newForm > :first-child {
+  flex: 1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-1);
+  color: inherit;
+  text-align: left;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-2);
+}
+
+.card[aria-current="true"] {
+  border-color: var(--color-text);
+}
+
+.card[data-over="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.portrait {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  /* checkerboard: reference sheets often have a transparent background */
+  background:
+    repeating-conic-gradient(var(--color-surface-2) 0 25%, var(--color-surface) 0 50%) 0 0 / 16px 16px;
+}
+
+.portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.initial {
+  font-size: 56px;
+  font-weight: var(--font-weight-semibold);
+  color: rgba(10, 10, 10, 0.55);
+}
+
+.cardName {
+  padding: 0 4px;
+  font-size: 15px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.cardRole {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding: 0 4px;
+  color: var(--color-text-2);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.cardMeta {
+  padding: 0 4px;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: var(--color-text-2);
+}
+
+/* ---------- avatars ---------- */
+.avatar {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  box-shadow: 0 0 0 1.5px var(--color-bg);
+  color: rgba(10, 10, 10, 0.65);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.stack > .avatar + .avatar {
+  margin-left: -7px;
+}
+
+.more {
+  margin-left: 4px;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--color-text-2);
+}
+
+/* ---------- side panel ---------- */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sectionTitle {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-2);
+}
+
+.hr {
+  height: 1px;
+  margin: 0;
+  border: none;
+  background: var(--color-border);
+}
+
+.muted {
+  color: var(--color-text-2);
+}
+
+.refGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ref {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.refImage {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background:
+    repeating-conic-gradient(var(--color-surface-2) 0 25%, var(--color-surface) 0 50%) 0 0 / 12px 12px;
+}
+
+.refImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.refActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 32px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 6px;
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.chip:not(:has(.avatar)) {
+  padding-left: 12px;
+}
+
+.chip:hover {
+  border-color: var(--color-text);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
+}
+
+.chip[aria-pressed="false"] .avatar {
+  opacity: 0.6;
+}
+
+/* ---------- rail entry ---------- */
+.railIcon {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  color: var(--color-text-2);
+}

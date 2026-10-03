@@ -30,6 +30,7 @@ import {
 } from "@/lib/book";
 import type { Book, Spread } from "@/lib/types";
 import type { SpreadPatch } from "../use-book";
+import { SpreadCharacters } from "../characters";
 import styles from "../editor.module.css";
 import { BoundTextArea } from "./fields";
 
@@ -44,6 +45,7 @@ export function PagePanel({
   onMove,
   onInsertAfter,
   onAsk,
+  onOpenCharacters,
 }: {
   book: Book;
   spread: Spread;
@@ -55,6 +57,7 @@ export function PagePanel({
   onMove: (delta: number) => void;
   onInsertAfter: () => void;
   onAsk: () => void;
+  onOpenCharacters: () => void;
 }) {
   const t = book.typography;
   const format = getFormat(book.format);
@@ -114,6 +117,13 @@ export function PagePanel({
           </Dropzone>
         )}
       </section>
+
+      <SpreadCharacters
+        book={book}
+        characterIds={spread.characterIds}
+        onChange={(characterIds) => onEdit({ characterIds })}
+        onOpenCharacters={onOpenCharacters}
+      />
 
       <hr className={styles.hr} />
 

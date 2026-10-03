@@ -53,7 +53,7 @@ src/
 
 ## Données
 
-Tables : `users`, `sessions`, `api_keys`, `books`, `spreads`, `assets`, `fonts`, `comments`, `activity`, `schema_migrations`. Schéma : [`src/server/db/migrations.ts`](../../src/server/db/migrations.ts).
+Tables : `users`, `sessions`, `api_keys`, `books`, `spreads`, `characters`, `character_images`, `assets`, `fonts`, `comments`, `activity`, `settings`, `schema_migrations`. Schéma : [`src/server/db/migrations.ts`](../../src/server/db/migrations.ts).
 
 - **Une seule source de vérité par écriture** : chaque modification passe par un service qui écrit la ligne, l'historique (`activity`, avec l'état d'avant en JSON) et publie un événement.
 - **Concurrence** : chaque double page a un `version`. L'éditeur et les agents envoient `baseVersion` ; un écart renvoie `409` avec la version actuelle. L'éditeur propose alors « garder la mienne / prendre la sienne ».
@@ -65,6 +65,7 @@ Tables : `users`, `sessions`, `api_keys`, `books`, `spreads`, `assets`, `fonts`,
 - Premier compte : créé au premier lancement ; `SETUP_TOKEN` peut l'exiger (instance exposée avant création du compte).
 - Mutations par cookie : en-tête `Origin` vérifié (en plus de `SameSite`).
 - Clés API : `lfab_` + 240 bits, hachées SHA-256, révocables.
+- Liens temporaires d'images ([ADR-0006](../decisions/0006-personnages-et-references.md)) : HMAC-SHA256 (image, taille, expiration) avec un secret de 256 bits tiré au premier usage et gardé dans `settings` ; 24 h ; un lien falsifié ou expiré renvoie 403.
 - Téléversements : signature binaire vérifiée (images par `sharp`, polices par leur en-tête), SVG refusé, tailles plafonnées ; URL d'image : https publique uniquement, résolution DNS vérifiée (pas d'adresse privée), pas de redirection.
 - En-têtes : `X-Robots-Tag: noindex`, `robots.txt` fermé, `X-Frame-Options: DENY`, `nosniff`.
 
@@ -75,5 +76,5 @@ Tables : `users`, `sessions`, `api_keys`, `books`, `spreads`, `assets`, `fonts`,
 ## Faire évoluer
 
 - Une fonction nouvelle = service + route REST + outil MCP + ligne dans [`02-api-agents.md`](02-api-agents.md).
-- Un schéma qui change = nouvelle migration (jamais modifier une migration livrée).
+- Un schéma qui change = nouvelle migration (jamais modifier une migration livrée). Reconstruire une table pointée par d'autres : `rebuildsTables: true` (clés étrangères coupées le temps de la migration, vérifiées avant validation).
 - Une police de plus = paquet `@fontsource/…` + `src/app/book-fonts.ts` + `src/lib/fonts.ts` (un test vérifie la cohérence).

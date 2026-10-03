@@ -9,7 +9,10 @@ import type { Book, Spread } from "@/lib/types";
 // saves per spread, and conflict detection when the agent wrote the same page meanwhile.
 
 export type SpreadPatch = Partial<
-  Pick<Spread, "text" | "illustrationBrief" | "illustrationFit" | "notes" | "textAlign" | "textValign" | "textSizePt" | "pageColor">
+  Pick<
+    Spread,
+    "text" | "illustrationBrief" | "illustrationFit" | "notes" | "textAlign" | "textValign" | "textSizePt" | "pageColor" | "characterIds"
+  >
 >;
 
 export interface Conflict {

@@ -224,10 +224,16 @@ export function buildMcpServer(actor: Actor, origin: string): McpServer {
     {
       title: "Historique",
       description: "Qui a modifié quoi, quand. Les entrées restaurables portent restorable=true.",
-      inputSchema: { book_id: bookId, spread_id: spreadId.optional(), limit: z.number().int().min(1).max(200).optional() },
+      inputSchema: {
+        book_id: bookId,
+        spread_id: spreadId.optional(),
+        character_id: z.string().optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+      },
       annotations: readOnly,
     },
-    ({ book_id, spread_id, limit }) => run(() => listActivity(book_id, { spreadId: spread_id, limit })),
+    ({ book_id, spread_id, character_id, limit }) =>
+      run(() => listActivity(book_id, { spreadId: spread_id, characterId: character_id, limit })),
   );
 
   server.registerTool(

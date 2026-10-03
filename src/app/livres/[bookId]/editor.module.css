@@ -238,6 +238,11 @@
   min-width: 0;
 }
 
+/* The characters board is long: it scrolls from the top instead of being centred. */
+.bench[data-mode="characters"] {
+  justify-content: flex-start;
+}
+
 .canvasWrap {
   position: relative;
   width: min(100%, calc((100dvh - var(--bar-h) - 150px) * var(--ratio)));
