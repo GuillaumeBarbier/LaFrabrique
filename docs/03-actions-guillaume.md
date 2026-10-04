@@ -25,11 +25,18 @@
 - [ ] **Ajouter le connecteur** (deux minutes, une fois le déploiement passé) : claude.ai › Paramètres › Connecteurs › Ajouter un connecteur personnalisé ; nom `La Fabrique` ; URL `https://lafabrique.guillaume-barbier.com/api/mcp` ; rien dans les champs OAuth avancés ; « Se connecter » ; dans La Fabrique, choisir le nom de l'agent (par ex. « Claude ») et « Lire et écrire ». Puis dans une conversation : « Liste mes livres La Fabrique ». Dis-moi si une étape coince (message exact).
 - [ ] **Ensuite**, la clé API créée pour tes premiers essais peut rester (Claude Code, scripts) ou être révoquée si tout passe par le connecteur.
 
+## Agent autonome (04/10, F2.11)
+
+- [ ] **Autoriser le domaine dans le bac à sable de ton agent** : là où Claude exécute du code (claude.ai : réglages de l'exécution de code, accès réseau / domaines autorisés ; Cowork : idem), ajouter `lafabrique.guillaume-barbier.com`. Sans ça, `curl -T` vers l'URL d'envoi échoue et l'agent retombera sur le navigateur.
+- [ ] **Rouvrir la conversation de l'agent** pour qu'il charge les nouveaux outils (`create_upload`, `commit_upload`, séries, `check_text`, planche contact) et les paramètres en snake_case.
+- [ ] **Faire de ton livre modèle une série** (deux minutes) : demande à ton agent « crée la série Victoire et Constance depuis le livre klet7691081m (`create_series` avec `from_book_id`), avec la règle : pas de guillemets, toujours Mama jamais Maman, puis étiquette les 5 images de chaque personnage (face, profil droit, profil gauche, dos, visage) ». Les livres suivants : `create_book` avec `series_id`. Je ne l'ai pas fait moi-même : c'est ton livre en ligne.
+- [ ] **Génération intégrée (F3.2)** : chiffrée dans la feuille de route (1 à 2 sessions ; quelques dollars par livre selon le modèle). Dis-moi si tu veux la lancer, et avec quel modèle (Imagen 4 ou Gemini Image).
+
 ## Décisions produit (valeurs par défaut appliquées en attendant)
 
 - [ ] **Couleur d'accent de l'interface** : or `#EFBF04` de Pro-Resa. Une autre couleur se change en une ligne (`src/styles/tokens.css`). L'agent a sa propre couleur, violette, pour qu'on voie ce qu'il fait.
 - [ ] **Format par défaut d'un nouveau livre** : carré 20 × 20 cm. Proposés aussi : 15 × 15, 21,6 × 21,6 (8,5″ KDP), 25 × 25, 21 × 28 portrait, 28 × 21 paysage. Un format manque ?
 - [ ] **Imprimeur visé** (imprimeur local, Lulu, KDP…) : conditionne l'export de la phase 4 (fonds perdus, PDF/X, dos de couverture). En attendant : PDF du navigateur, à taille réelle, fonds perdus 3 mm en option.
-- [ ] **Génération intégrée (phase 3)** : veux-tu générer les illustrations *dans* La Fabrique (fournisseur à choisir : OpenAI, Google, fal/Flux…, avec ta clé), ou l'agent externe suffit-il ? Même question pour l'aide à l'écriture (clé Anthropic).
+- [ ] **Génération intégrée (phase 3)** : veux-tu générer les illustrations *dans* La Fabrique (fournisseur à choisir : OpenAI, Google, fal/Flux…, avec ta clé), ou l'agent externe suffit-il ? Même question pour l'aide à l'écriture (clé Anthropic). Chiffrage Google : voir F3.2.
 - [ ] **D'autres personnes** (famille, illustrateur) auront-elles un compte ? *Par défaut : un seul compte humain, des agents par clé.*
 - [ ] **Mise en forme du texte** : as-tu besoin de mots en gras, en couleur ou en grand dans le texte (fréquent en album) ? Si oui, on le prévoit avec F2.6.

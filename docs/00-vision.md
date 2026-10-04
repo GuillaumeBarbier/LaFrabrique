@@ -45,6 +45,7 @@ Un atelier où Guillaume et un agent IA écrivent, illustrent et mettent en page
 | 15 | **Thème clair / sombre** de l'interface | Confort de travail le soir | 1 |
 | 16 | **Pas d'indexation** (`noindex`, `robots.txt`) | Livres privés, peut-être avec les prénoms des enfants | 1 |
 | 17 | Fiches **personnages** avec images de référence | Cohérence des illustrations d'une page à l'autre | 2 — fait le 03/10 |
+| 17b | **Agent autonome** : envoi de fichiers locaux sans navigateur, séries (univers partagé), règles d'écriture vérifiables | Produire des livres en série sans passer par l'interface | 2 — fait le 04/10 |
 | 18 | **Export / import ZIP** d'un livre, **sauvegarde** du dossier de données | Ne rien perdre, déménager du VPS au NAS | 2 |
 | 19 | **Dupliquer** un livre (variante, traduction) | Décliner une histoire | 2 |
 | 20 | Mode **suggestion** : l'agent propose, l'humain accepte | Garder la main sur le texte final | 2 |

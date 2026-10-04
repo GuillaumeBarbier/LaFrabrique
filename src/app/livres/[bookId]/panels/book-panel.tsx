@@ -27,6 +27,7 @@ import {
 import { errorMessage } from "@/lib/client";
 import { FONT_CATALOG, FONT_CATEGORY_LABELS, fontFamilyCss } from "@/lib/fonts";
 import type { Book, CustomFont } from "@/lib/types";
+import { forbiddenLines, parseForbiddenLines, QUOTE_STYLE_LABELS, QUOTE_STYLE_RULES, QUOTE_STYLES, type QuoteStyle } from "@/lib/writing";
 import styles from "../editor.module.css";
 import { BoundTextArea, BoundTextField } from "./fields";
 
@@ -181,6 +182,51 @@ export function BookPanel({
           placeholder={BRIEF_PLACEHOLDER}
           value={book.brief}
           onSave={(brief) => save({ brief })}
+        />
+      </section>
+
+      <hr className={styles.hr} />
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Écriture et style</h3>
+        {book.series && (
+          <p className={styles.words} title="Personnages, style et règles de la série valent pour ce livre ; ceux saisis ici s'y ajoutent.">
+            Série « {book.series.title} »
+          </p>
+        )}
+        <Select<QuoteStyle | "inherit">
+          label="Dialogues"
+          hint={QUOTE_STYLE_RULES[book.effective.quoteStyle]}
+          value={book.quoteStyle ?? "inherit"}
+          onChange={(v) => save({ quoteStyle: v === "inherit" ? null : v })}
+          options={[
+            { value: "inherit", label: book.series ? "Comme la série" : "Selon la langue" },
+            ...QUOTE_STYLES.map((q) => ({ value: q, label: QUOTE_STYLE_LABELS[q] })),
+          ]}
+        />
+        <BoundTextArea
+          label="Règles d'écriture"
+          hint="Lues par l'agent avant d'écrire et rappelées dans ses consignes."
+          rows={4}
+          placeholder={"Toujours « Mama », jamais « Maman »\nPhrases courtes, présent de narration"}
+          value={book.writingRules}
+          onSave={(writingRules) => save({ writingRules })}
+        />
+        <BoundTextArea
+          label="Mots à éviter"
+          hint="Un par ligne, avec le remplaçant après une flèche. Vérifiés par check_text."
+          rows={3}
+          placeholder="Maman → Mama"
+          value={forbiddenLines(book.forbiddenWords)}
+          onSave={(text) => save({ forbiddenWords: parseForbiddenLines(text) })}
+        />
+        <BoundTextArea
+          label="Style d'illustration"
+          hint="Donné au générateur d'images avec les références des personnages (get_references)."
+          rows={3}
+          placeholder="Aquarelle douce, contours encrés, palette pastel…"
+          value={book.illustrationStyle}
+          onSave={(illustrationStyle) => save({ illustrationStyle })}
         />
       </section>
 

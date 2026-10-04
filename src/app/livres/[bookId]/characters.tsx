@@ -9,6 +9,7 @@ import { Hint, TextField } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch, errorMessage, uploadFile } from "@/lib/client";
 import type { Book, Character } from "@/lib/types";
+import { viewLabel } from "@/lib/views";
 import styles from "./characters.module.css";
 import { BoundTextArea, BoundTextField } from "./panels/fields";
 import { useFileDrop } from "./spread-canvas";
@@ -88,6 +89,7 @@ function CharacterCard({
         <span className={styles.cardName}>{character.name}</span>
         {character.role && <span className={styles.cardRole}>{character.role}</span>}
         <span className={styles.cardMeta}>
+          {character.seriesId && `${book.series ? "Série" : "Partagé"} · `}
           {character.images.length} image{character.images.length > 1 ? "s" : ""}
           {pages.length > 0 && ` · p. ${pages.join(", ")}`}
         </span>
@@ -235,7 +237,14 @@ export function CharacterPanel({
   return (
     <>
       <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>Fiche</h3>
+        <div className={styles.titleRow}>
+          <h3 className={styles.sectionTitle}>Fiche</h3>
+          {character.seriesId && (
+            <Badge tone="gold" title="Personnage de la série : une modification vaut pour tous ses livres.">
+              Série{book.series ? ` · ${book.series.title}` : ""}
+            </Badge>
+          )}
+        </div>
         <BoundTextField label="Nom" value={character.name} maxLength={80} onSave={(name) => name.trim() && save({ name })} />
         <BoundTextField
           label="Rôle"
@@ -276,6 +285,9 @@ export function CharacterPanel({
                   onSave={(label) => void call(() => apiFetch(`${base}/images/${img.id}`, { method: "PATCH", json: { label } }))}
                 />
                 <div className={styles.refActions}>
+                  <span className={styles.refView} title="Vue lue par l'agent qui illustre (déduite de la légende).">
+                    {viewLabel(img.view)}
+                  </span>
                   {img.primary ? (
                     <Badge tone="gold">Principale</Badge>
                   ) : (

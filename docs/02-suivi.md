@@ -11,6 +11,14 @@
 
 ## Journal
 
+### 2026-10-04 — Session Claude : agent autonome (F2.11)
+
+- **Demande** de Guillaume : que l'agent fasse tout par MCP, sans l'interface web (envoi des images générées hors de La Fabrique, séries, règles d'écriture, cohérence des outils).
+- **Fait** ([ADR-0008](decisions/0008-agent-autonome-envois-series-regles.md)) : envoi de fichiers locaux par URL signée à usage unique (`create_upload`, `curl -T`, `commit_upload`, `auto_commit`, `files[]`, `upload_id` partout) ; vues normalisées des références et `by_view` ; séries (personnages partagés, style, règles, défauts ; depuis un livre modèle) et `clone_book_setup` ; règles d'écriture en données + `check_text` ; MCP en snake_case strict (inconnu = erreur nommant le bon paramètre), réponses courtes, `get_book` `include`/`summary`, `view_illustration` par cible, `view_book_contact_sheet` ; historique détaillé, chaque image annulable ; consignes « Avant / Pendant / Images / Après » ; champs Écriture et style dans l'onglet Livre, badge Série sur les fiches. Migration 4.
+- **Vérifié** : 48 tests (envois de 3 Mo pour chaque cible, lien à usage unique, expiration, série, copie, paramètres inconnus, réponses courtes, migration d'une base v3) ; serveur de production local : `curl -T` d'un PNG de 6 Mo (0,6 s), second envoi refusé, commit, planche contact ; `scripts/exemple-serie.mjs` de bout en bout (20 références, livre de la série, illustration et couverture à 305 dpi, historique signé de l'agent).
+- **Retours** : R-10 à R-12. Chiffrage de la génération intégrée dans F3.2.
+- **Ensuite** : Guillaume autorise le domaine dans le bac à sable de son agent et transforme son livre modèle en série (actions) ; F2.12 (page Série) si l'interface en a besoin.
+
 ### 2026-10-03 — Session Claude : connecteur OAuth (F2.8)
 
 - **Demande** de Guillaume : brancher La Fabrique comme connecteur OAuth (claude.ai, Desktop, mobile).
@@ -45,6 +53,9 @@
 | R-06 | 03/10 | Claude | Un lien signé `signedUrl` reste valable 24 h même si la clé de l'agent est révoquée entre-temps : à garder en tête si une clé fuit (révoquer suffit pour l'API, pas pour les liens déjà émis). Faire tourner le secret = supprimer la ligne `signing_secret` de `settings`. | ouvert |
 | R-08 | 03/10 | Claude | Le document CIMD d'un client est lu sans suivre de redirection (anti-SSRF). Si Anthropic déplaçait ses documents derrière une redirection (claude.ai → claude.com), l'accord échouerait avec « Document du client illisible » : autoriser alors les redirections vers des hôtes publics. | ouvert |
 | R-09 | 03/10 | Claude | Les connexions OAuth expirées ou révoquées restent listées dans Paramètres (traçabilité). Un bouton « Effacer » viendra si la liste s'allonge. | ouvert |
+| R-10 | 04/10 | Claude | Les paramètres MCP sont passés en snake_case : un agent connecté avant le 04/10 qui envoie `illustrationBrief` ou `characterIds` reçoit une erreur qui nomme le bon paramètre. Rouvrir la conversation pour recharger les outils. | ouvert |
+| R-11 | 04/10 | Claude | Les 20 images de référence du livre modèle (Victoire, Constance, Papa, Mama) n'ont pas d'étiquette : leur vue vaut `other` tant qu'un agent ne les légende pas (`update_character_image` avec `label` ou `view`). | ouvert |
+| R-12 | 04/10 | Claude | Un envoi reçu mais jamais attaché est effacé après 24 h ; une image remplacée reste gardée pour l'historique (F2.10). | ouvert |
 | R-07 | 03/10 | Claude | La suppression d'un personnage le retire des doubles pages sans changer leur `version` (nettoyage dérivé, pour ne pas provoquer de faux conflits) ; la restauration le remet sur ces pages. | fait |
 
 ## Points ouverts

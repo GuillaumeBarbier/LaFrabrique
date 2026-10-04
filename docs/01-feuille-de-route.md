@@ -8,7 +8,7 @@
 |---|---|---|
 | 0 — Socle | Dépôt, docs, app, base, connexion, Docker | Fait (mise en ligne ⏸) |
 | 1 — Atelier (MVP) | Créer un livre de A à Z avec un agent branché | Fait, recette en ligne ⏸ |
-| 2 — Collaboration avancée | Personnages, sauvegardes, suggestions, duplication | À venir |
+| 2 — Collaboration avancée | Personnages, agent autonome, séries, sauvegardes, suggestions | En cours |
 | 3 — Génération intégrée | Illustrations et aide à l'écriture dans l'app | ⏸ choix du fournisseur |
 | 4 — Édition | Export imprimeur, EPUB, lien de lecture, audio | À venir |
 
@@ -40,23 +40,25 @@
 ## Phase 2 — Collaboration avancée
 
 - [x] **F2.1 — Personnages** (demandé par Guillaume le 03/10, [ADR-0006](decisions/0006-personnages-et-references.md)) : fiche (nom, rôle, apparence), images de référence étiquetées avec une principale, personnages présents par double page, `get_references` pour l'agent qui illustre avec liens temporaires 24 h, historique et restauration.
-- [ ] **F2.1b — Références de style** : planches d'ambiance et palette au niveau du livre, servies avec les personnages par `get_references`.
+- [ ] **F2.1b — Références de style** : planches d'ambiance et palette au niveau du livre, servies avec les personnages par `get_references`. *Le style en texte (`illustration_style`, série et livre) est fait (F2.11) ; restent les images d'ambiance.*
 - [ ] **F2.2 — Export / import ZIP d'un livre** : JSON + illustrations + polices utilisées ; import qui recrée le livre.
 - [ ] **F2.3 — Sauvegardes** : copie à chaud de la base (`VACUUM INTO`) + fichiers, rotation ; doc NAS (Hyper Backup) et VPS.
-- [ ] **F2.4 — Dupliquer un livre** (variante, traduction).
+- [ ] **F2.4 — Dupliquer un livre** (variante, traduction). *La mise en place sans les pages existe (`clone_book_setup`, F2.11) ; reste la copie complète avec les pages.*
 - [ ] **F2.5 — Mode suggestion** : l'agent propose un texte sur une page, l'humain accepte ou refuse ; réglable par clé (« écrire directement » / « proposer »).
 - [ ] **F2.6 — Confort d'édition** : glisser-déposer des vignettes, raccourcis clavier, zoom, mise en forme légère du texte (gras, italique, mots en grand).
 - [ ] **F2.7 — Second facteur** (TOTP, codes de secours) si l'outil reste exposé sur Internet.
 - [x] **F2.8 — Connecteur claude.ai** (demandé par Guillaume le 03/10, [ADR-0007](decisions/0007-connecteur-oauth.md)) : OAuth 2.1 sur le serveur MCP — découverte, CIMD et enregistrement dynamique, consentement qui nomme l'agent et fixe sa portée, PKCE, rotation des jetons, connexions révocables dans Paramètres. Testé de bout en bout avec le client MCP officiel.
 - [ ] **F2.9 — Tests de bout en bout** (Playwright) des parcours bibliothèque → éditeur → impression. Le script de la session de lancement (connexion, saisie, conflit, direct, téléversement) peut servir de point de départ ([`02-suivi.md`](02-suivi.md), R-04).
 - [ ] **F2.10 — Ménage des fichiers** : illustrations remplacées et jamais restaurées (aujourd'hui gardées pour l'historique), après 90 jours.
+- [x] **F2.11 — Agent autonome** (demandé par Guillaume le 04/10, [ADR-0008](decisions/0008-agent-autonome-envois-series-regles.md)) : envoi de fichiers locaux par URL signée à usage unique (`create_upload` → `curl -T` → `commit_upload`, plusieurs fichiers, dpi et avertissements, jamais de refus) ; personnages avec vues normalisées, position, copie, réordonnancement ; **séries** (personnages partagés, style, règles, valeurs par défaut ; `create_series` depuis un livre modèle, `create_book(series_id)`, `clone_book_setup`) ; **règles d'écriture** en données (`writing_rules`, `quote_style`, `forbidden_words`, `check_text`) ; MCP strict en snake_case, réponses courtes, `get_book` résumé, planche contact ; historique détaillé des images. Exemple de bout en bout : `scripts/exemple-serie.mjs`.
+- [ ] **F2.12 — Interface des séries** : page Série (créer depuis un livre, fiches partagées, style et règles) ; aujourd'hui l'humain voit la série dans le livre (badge, règles du livre) et l'agent la gère.
 
 ## Phase 3 — Génération intégrée ⏸
 
 > Attend le choix de Guillaume ([`03-actions-guillaume.md`](03-actions-guillaume.md)) : fournisseur d'images, budget, et si l'agent externe suffit.
 
 - [ ] **F3.1 — Clés fournisseurs** dans Paramètres, chiffrées au repos.
-- [ ] **F3.2 — Générer une illustration** depuis le brief d'illustration, le style du livre et les images de référence des personnages ; plusieurs propositions, choix, historique.
+- [ ] **F3.2 — Générer une illustration** depuis le brief d'illustration, le style du livre et les images de référence des personnages ; plusieurs propositions, choix, historique. *Chiffrage du 04/10 (ADR-0008, § 6 de la demande) : outils `generate_illustration(spread_id, prompt?, reference_character_ids?, count 1–4)` et `select_illustration_variant` ; table des propositions (variantes gardées sans écraser l'illustration), clé Google chiffrée (F3.1), quota mensuel (F3.4). Travail : 1 à 2 sessions. Coût API indicatif (tarifs publics relevés par des tiers, à vérifier sur ai.google.dev/pricing) : Imagen 4 0,02 à 0,06 $ l'image ; Gemini 3.1 Flash Image 0,045 à 0,15 $ ; Gemini 3 Pro Image 0,134 $ (1K/2K) à 0,24 $ (4K). Un livre de 12 doubles pages + couverture avec 4 propositions chacune = 52 images ≈ 2 à 8 $ en Flash, 7 à 12,50 $ en Pro 4K (la 4K approche les 2 434 px requis à 300 dpi ; en dessous, l'avertissement `lowResolution` le dira).*
 - [ ] **F3.3 — Aide à l'écriture** : simplifier pour l'âge, rimer, raccourcir, traduire.
 - [ ] **F3.4 — Suivi des coûts** par livre, plafond mensuel.
 

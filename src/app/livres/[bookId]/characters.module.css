@@ -237,6 +237,16 @@
   min-height: 32px;
 }
 
+.refView {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-2);
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
