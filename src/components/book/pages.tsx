@@ -10,8 +10,11 @@ import styles from "./pages.module.css";
 
 const VALIGN = { top: "flex-start", middle: "center", bottom: "flex-end" } as const;
 
+/** What drawing a spread needs (the editor's spreads, or a shared book's). */
+export type PageSpread = Pick<Spread, "text" | "illustration" | "illustrationBrief" | "illustrationFit" | "pageColor" | "textSizePt" | "textAlign" | "textValign">;
+
 /** CSS variables of a page: format, typography, spread overrides. */
-export function pageVars(format: string, typo: Typography, spread?: Spread | null): CSSProperties {
+export function pageVars(format: string, typo: Typography, spread?: PageSpread | null): CSSProperties {
   const f = getFormat(format);
   return {
     "--page-w-mm": f.widthMm,
@@ -31,12 +34,12 @@ export function pageVars(format: string, typo: Typography, spread?: Spread | nul
 
 export type ImageSize = "thumb" | "web" | "print";
 
-function imageUrl(spread: Spread, size: ImageSize): string | null {
+function imageUrl(spread: PageSpread, size: ImageSize): string | null {
   if (!spread.illustration) return null;
   return size === "thumb" ? spread.illustration.thumbUrl : size === "web" ? spread.illustration.webUrl : spread.illustration.printUrl;
 }
 
-export function IllustrationContent({ spread, size, showBrief = true }: { spread: Spread; size: ImageSize; showBrief?: boolean }) {
+export function IllustrationContent({ spread, size, showBrief = true }: { spread: PageSpread; size: ImageSize; showBrief?: boolean }) {
   const url = imageUrl(spread, size);
   if (url) {
     return (
@@ -66,7 +69,7 @@ export function SpreadView({
   className,
 }: {
   book: Pick<Book, "format" | "typography" | "language">;
-  spread: Spread;
+  spread: PageSpread;
   size?: ImageSize;
   showBrief?: boolean;
   className?: string;
@@ -97,7 +100,7 @@ export function TitlePageContent({ book }: { book: Pick<Book, "title" | "subtitl
   );
 }
 
-export function CoverContent({ book, size }: { book: Book; size: ImageSize }) {
+export function CoverContent({ book, size }: { book: Pick<Book, "cover" | "title" | "subtitle" | "author" | "illustrator">; size: ImageSize }) {
   const url = book.cover ? (size === "thumb" ? book.cover.thumbUrl : size === "web" ? book.cover.webUrl : book.cover.printUrl) : null;
   return (
     <>

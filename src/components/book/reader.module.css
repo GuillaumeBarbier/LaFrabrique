@@ -42,12 +42,19 @@
   text-decoration: none;
 }
 
+.actions {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
 .close:hover {
   background: var(--color-gold-400);
   color: var(--color-black);
 }
 
 .stage {
+  /* Nothing to click in a page: taps reach the turn zones underneath. */
+  pointer-events: none;
   width: min(calc(100vw - 48px), calc((100dvh - 140px) * var(--ratio)));
   box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.9);
   animation: turn var(--duration-base) var(--ease-out);
@@ -105,4 +112,26 @@
 
 .dot[aria-current="true"] {
   background: var(--color-gold-400);
+}
+
+/* Phone held upright: the illustration above its text, each page as wide as the screen. */
+@media (orientation: portrait) and (max-width: 700px) {
+  .stage {
+    width: min(calc(100vw - 32px), calc((100dvh - 140px) * var(--ratio) / 4));
+  }
+
+  .single {
+    width: min(calc(100vw - 32px), calc((100dvh - 140px) * var(--ratio) / 2));
+  }
+
+  .stackable.stackable {
+    grid-template-columns: 1fr;
+    aspect-ratio: var(--page-w-mm) / calc(var(--page-h-mm) * 2);
+  }
+
+  /* No fold between two pages that are no longer side by side. */
+  .stackable.stackable.stackable > *::before,
+  .stackable.stackable.stackable > *::after {
+    display: none;
+  }
 }

@@ -293,3 +293,32 @@ export interface UploadResult {
   imageId?: string;
   warnings: UploadWarning[];
 }
+
+/** A reading link (ADR-0009): the book in the viewer, without an account. */
+export interface Share {
+  id: string;
+  bookId: string;
+  /** Who it is for ("Mamie", "la classe de CP"). */
+  label: string;
+  /** Absent for agents: only the human hands out links. */
+  url?: string;
+  createdAt: string;
+  createdBy: ActorRef;
+  expiresAt: string | null;
+  expired: boolean;
+  lastViewedAt: string | null;
+  viewCount: number;
+}
+
+/** What a visitor's browser receives: the pages and nothing of the workshop. */
+export interface SharedBook {
+  title: string;
+  subtitle: string;
+  author: string;
+  illustrator: string;
+  language: string;
+  format: string;
+  typography: Typography;
+  cover: AssetRef | null;
+  spreads: Pick<Spread, "id" | "text" | "illustration" | "illustrationBrief" | "illustrationFit" | "pageColor" | "textSizePt" | "textAlign" | "textValign">[];
+}

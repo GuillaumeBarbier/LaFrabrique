@@ -32,6 +32,11 @@
 - [ ] **Faire de ton livre modèle une série** (deux minutes) : demande à ton agent « crée la série Victoire et Constance depuis le livre klet7691081m (`create_series` avec `from_book_id`), avec la règle : pas de guillemets, toujours Mama jamais Maman, puis étiquette les 5 images de chaque personnage (face, profil droit, profil gauche, dos, visage) ». Les livres suivants : `create_book` avec `series_id`. Je ne l'ai pas fait moi-même : c'est ton livre en ligne.
 - [ ] **Génération intégrée (F3.2)** : chiffrée dans la feuille de route (1 à 2 sessions ; quelques dollars par livre selon le modèle). Dis-moi si tu veux la lancer, et avec quel modèle (Imagen 4 ou Gemini Image).
 
+## Liens de lecture (04/10, F4.4)
+
+- [ ] **Essayer** : dans un livre, « Partager » (en haut à droite), « Pour qui », validité, « Créer le lien » (il est copié) ; l'envoyer, ou l'ouvrir dans une fenêtre de navigation privée pour voir ce que verra le lecteur. « Révoquer » coupe tout de suite.
+- [ ] **Si tu veux que tes agents puissent créer des liens** eux-mêmes (aujourd'hui réservé à toi, comme les clés), dis-le : c'est une ligne et une ADR.
+
 ## Décisions produit (valeurs par défaut appliquées en attendant)
 
 - [ ] **Couleur d'accent de l'interface** : or `#EFBF04` de Pro-Resa. Une autre couleur se change en une ligne (`src/styles/tokens.css`). L'agent a sa propre couleur, violette, pour qu'on voie ce qu'il fait.

@@ -10,7 +10,7 @@
 | 1 — Atelier (MVP) | Créer un livre de A à Z avec un agent branché | Fait, recette en ligne ⏸ |
 | 2 — Collaboration avancée | Personnages, agent autonome, séries, sauvegardes, suggestions | En cours |
 | 3 — Génération intégrée | Illustrations et aide à l'écriture dans l'app | ⏸ choix du fournisseur |
-| 4 — Édition | Export imprimeur, EPUB, lien de lecture, audio | À venir |
+| 4 — Édition | Export imprimeur, EPUB, lien de lecture (fait), audio | En partie |
 
 ## Phase 0 — Socle
 
@@ -67,5 +67,5 @@
 - [ ] **F4.1 — Export imprimeur côté serveur** : PDF avec fonds perdus et traits de coupe, couverture à plat avec dos calculé selon le papier et le nombre de pages.
 - [ ] **F4.2 — Pages de structure** : 4ᵉ de couverture, pages de garde, page de titre et colophon réglables.
 - [ ] **F4.3 — EPUB** mise en page fixe (tablette).
-- [ ] **F4.4 — Lien de lecture privé** (jeton, expiration, révocable) pour la famille.
+- [x] **F4.4 — Lien de lecture** (demandé par Guillaume le 04/10, [ADR-0009](decisions/0009-liens-de-lecture.md)) : bouton « Partager » de l'éditeur, un lien par destinataire (étiquette, 7 jours / 30 jours / sans limite), visionneuse sans compte (couverture et pages seulement, images en taille écran), plein écran, pages empilées sur téléphone en portrait, révocation immédiate, compteur de lectures ; agents : `list_shares` sans les liens.
 - [ ] **F4.5 — Narration audio** par page (synthèse vocale), lecture dans le mode lecture.

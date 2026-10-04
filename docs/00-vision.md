@@ -50,7 +50,7 @@ Un atelier où Guillaume et un agent IA écrivent, illustrent et mettent en page
 | 19 | **Dupliquer** un livre (variante, traduction) | Décliner une histoire | 2 |
 | 20 | Mode **suggestion** : l'agent propose, l'humain accepte | Garder la main sur le texte final | 2 |
 | 21 | **Génération d'illustrations** et aide à l'écriture intégrées (clés fournisseurs dans Paramètres) | Travailler sans agent externe | 3 |
-| 22 | **Lien de lecture privé** pour la famille | Faire lire avant d'imprimer | 4 |
+| 22 | **Lien de lecture privé** pour la famille | Faire lire avant d'imprimer | 4 — fait le 04/10 |
 | 23 | **Export imprimeur** (PDF/X, couverture à plat avec dos), **EPUB** mise en page fixe | Imprimer pour de vrai, lire sur tablette | 4 |
 | 24 | **Narration audio** (synthèse vocale) | Livre lu pour les plus petits | 4 |
 

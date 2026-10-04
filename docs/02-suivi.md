@@ -11,6 +11,13 @@
 
 ## Journal
 
+### 2026-10-04 — Session Claude : liens de lecture (F4.4)
+
+- **Demande** de Guillaume : faire lire un livre à quelqu'un qui n'a pas de compte, en visionneuse.
+- **Fait** ([ADR-0009](decisions/0009-liens-de-lecture.md)) : bouton « Partager » dans l'éditeur (pour qui, validité 7 j / 30 j / sans limite, lien copié, liste des liens avec lectures, révocation) ; page `/lire/<jeton>` sans compte, reprise du mode lecture (déplacé dans `components/book/reader.tsx`), sans bouton Fermer ; images et polices servies par le lien seulement, en taille écran ; plein écran ; sur téléphone en portrait, l'illustration au-dessus de son texte, et toucher une page la tourne. REST `GET/POST /api/v1/books/{id}/shares`, `DELETE /api/v1/shares/{id}` (humain), MCP `list_shares` (sans les liens). Migration 5.
+- **Vérifié** : 53 tests (contenu reçu par le lecteur sans rien de l'atelier, images autorisées ou non, expiration, révocation, création refusée à un agent, liens cachés aux agents) ; dans Chromium : création depuis l'éditeur, lecture dans un navigateur sans session (aucune requête refusée, aucune fuite du brief), lien inconnu, éditeur toujours fermé au visiteur, téléphone.
+- **Ensuite** : Guillaume essaie avec un vrai destinataire (actions).
+
 ### 2026-10-04 — Session Claude : agent autonome (F2.11)
 
 - **Demande** de Guillaume : que l'agent fasse tout par MCP, sans l'interface web (envoi des images générées hors de La Fabrique, séries, règles d'écriture, cohérence des outils).
@@ -57,6 +64,7 @@
 | R-10 | 04/10 | Claude | Les paramètres MCP sont passés en snake_case : un agent connecté avant le 04/10 qui envoie `illustrationBrief` ou `characterIds` reçoit une erreur qui nomme le bon paramètre. Rouvrir la conversation pour recharger les outils. | ouvert |
 | R-11 | 04/10 | Claude | Les 20 images de référence du livre modèle (Victoire, Constance, Papa, Mama) n'ont pas d'étiquette : leur vue vaut `other` tant qu'un agent ne les légende pas (`update_character_image` avec `label` ou `view`). | ouvert |
 | R-12 | 04/10 | Claude | Un envoi reçu mais jamais attaché est effacé après 24 h ; une image remplacée reste gardée pour l'historique (F2.10). | ouvert |
+| R-13 | 04/10 | Claude | Un aperçu de lien par une messagerie (WhatsApp, iMessage…) ouvre la page et compte comme une lecture. | ouvert |
 | R-07 | 03/10 | Claude | La suppression d'un personnage le retire des doubles pages sans changer leur `version` (nettoyage dérivé, pour ne pas provoquer de faux conflits) ; la restauration le remet sur ces pages. | fait |
 
 ## Points ouverts

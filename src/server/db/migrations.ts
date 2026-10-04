@@ -374,4 +374,26 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE INDEX uploads_created ON uploads(created_at);
     `,
   },
+  {
+    version: 5,
+    name: "shares",
+    sql: `
+      -- Reading links (ADR-0009): a book shown read-only, without an account, to whoever has
+      -- the link. The token stays readable so the owner can copy the link again; it opens
+      -- one book in the viewer and nothing else.
+      CREATE TABLE shares (
+        id TEXT PRIMARY KEY,
+        book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        created_by_type TEXT NOT NULL CHECK (created_by_type IN ('human', 'agent')),
+        created_by_name TEXT NOT NULL,
+        expires_at TEXT,                   -- NULL = until revoked
+        last_viewed_at TEXT,
+        view_count INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE INDEX shares_book ON shares(book_id);
+    `,
+  },
 ];

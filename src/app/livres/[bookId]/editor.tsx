@@ -18,6 +18,7 @@ import { BookPanel } from "./panels/book-panel";
 import { CommentsPanel } from "./panels/comments-panel";
 import { HistoryPanel } from "./panels/history-panel";
 import { PagePanel } from "./panels/page-panel";
+import { ShareButton } from "./share";
 import { CoverCanvas, SpreadCanvas } from "./spread-canvas";
 import { useBook } from "./use-book";
 
@@ -252,6 +253,7 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
           <span className={styles.saveDot} data-saving={saving} />
           {saving ? "Enregistrement" : "Enregistré"}
         </span>
+        <ShareButton bookId={book.id} title={book.title} />
         <LinkButton href={`/livres/${book.id}/lire`} variant="secondary" size="sm" icon={<BookOpen />}>
           Lire
         </LinkButton>

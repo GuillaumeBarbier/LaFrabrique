@@ -49,6 +49,7 @@ export const GET = api("read", ({ req }) => {
       "POST   /api/v1/uploads                         ({ bookId|seriesId, kind, targetId?, filename, label?, view?, primary?, autoCommit?, files?: [...] })",
       "PUT    /api/v1/uploads/{uploadId}?token=       (no key: the file itself, curl -T ; POST multipart file also)",
       "POST   /api/v1/uploads/commit                  ({ uploadIds: [...] })",
+      "GET    /api/v1/books/{bookId}/shares          (reading links; created and revoked by the human only)",
       "GET    /api/v1/books/{bookId}/comments?spreadId=&open=1",
       "POST   /api/v1/books/{bookId}/comments",
       "PATCH  /api/v1/comments/{commentId}             ({ resolved: boolean })",

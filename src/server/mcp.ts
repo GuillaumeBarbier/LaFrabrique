@@ -55,6 +55,7 @@ import { createComment, createCommentSchema, listComments, listOpenRequests, set
 import { listCustomFonts } from "./services/fonts";
 import { BOOK_SECTIONS, presentBook, presentCharacter, presentSpread } from "./services/present";
 import { createSeries, createSeriesSchema, getSeries, listSeries, updateSeries, updateSeriesSchema } from "./services/series";
+import { listShares } from "./services/shares";
 import { checkText } from "./services/text-check";
 import {
   addCharacterImageFromUpload,
@@ -401,6 +402,18 @@ export function buildMcpServer(actor: Actor, origin: string): McpServer {
       annotations: readOnly,
     },
     ({ book_id, spread_id, min_severity }) => run(() => checkText(book_id, { spreadId: spread_id, minSeverity: min_severity })),
+  );
+
+  server.registerTool(
+    "list_shares",
+    {
+      title: "Liens de lecture",
+      description:
+        "Avec qui le livre est partagé en lecture seule (lien sans compte) : pour qui, expiration, nombre de lectures. Les liens eux-mêmes et leur création restent à Guillaume (bouton Partager de l'éditeur).",
+      inputSchema: input({ book_id: bookId }),
+      annotations: readOnly,
+    },
+    ({ book_id }) => run(() => listShares(book_id, null)),
   );
 
   server.registerTool(

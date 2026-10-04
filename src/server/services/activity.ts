@@ -20,6 +20,8 @@ export type ActivityAction =
   | "character.delete"
   | "series.create"
   | "series.update"
+  | "share.create"
+  | "share.revoke"
   | "restore";
 
 const RESTORABLE = new Set<string>([

@@ -11,7 +11,7 @@ Paramètres › Agents IA › « Créer une clé » : un **nom** (il signe chaqu
 | `read` | Tout lire : livres, doubles pages, images, échanges, historique, polices |
 | `write` | Tout ce que fait `read`, plus écrire, illustrer, commenter, résoudre, restaurer, changer statut et typographie |
 
-Jamais par clé, quelle que soit la portée : **supprimer un livre**, gérer les clés, téléverser ou supprimer une police perso, supprimer un message. La clé (`lfab_…`) n'est montrée qu'une fois ; elle est stockée hachée et révocable.
+Jamais par clé, quelle que soit la portée : **supprimer un livre**, gérer les clés, créer ou révoquer un lien de lecture, téléverser ou supprimer une police perso, supprimer un message. La clé (`lfab_…`) n'est montrée qu'une fois ; elle est stockée hachée et révocable.
 
 ## 2. Se connecter
 
@@ -84,6 +84,7 @@ claude mcp add --transport http lafabrique https://lafabrique.guillaume-barbier.
 | `get_references` | read | **À appeler avant d'illustrer** : `illustration_style`, personnages présents, images classées (`by_view`), affichées (`images` : primary, all, none) et liens `signed_url` 24 h ; filtre `views` |
 | `list_series`, `get_series` | read | Séries |
 | `check_text` | read | Règles d'écriture appliquées aux pages (`min_severity`) |
+| `list_shares` | read | Avec qui le livre est partagé en lecture (étiquette, validité, lectures), sans les liens |
 | `list_comments`, `list_activity` | read | Échanges ; historique (livre ou série) avec `details` |
 | `list_fonts`, `list_formats` | read | Polices ; formats, statuts, vues, guillemets, kinds d'envoi |
 | `create_upload`, `commit_upload` | write | **Envoi de fichiers locaux** (§ 10) |
@@ -132,6 +133,8 @@ REST reste en **camelCase** (mêmes objets que l'interface).
 | POST | `/api/v1/uploads` | Prépare un ou plusieurs envois (§ 10) |
 | PUT, POST | `/api/v1/uploads/{uploadId}?token=` | **Sans clé** : le fichier (brut ou multipart `file`) |
 | POST | `/api/v1/uploads/commit` | `{ uploadIds: [...] }` |
+| GET, POST | `/api/v1/books/{bookId}/shares` | Liens de lecture (§ 14) ; POST réservé à l'humain |
+| DELETE | `/api/v1/shares/{shareId}` | Révoque un lien ; réservé à l'humain |
 | GET, POST | `/api/v1/books/{bookId}/comments` | `?spreadId=&open=1` |
 | PATCH | `/api/v1/comments/{commentId}` | `{ resolved: boolean }` |
 | GET | `/api/v1/books/{bookId}/activity` | `?spreadId=&characterId=&limit=` |
@@ -250,3 +253,7 @@ Sans `quote_style` fixé (ni série ni livre), `writing_guide` renvoie au brief 
 ```bash
 LAFABRIQUE_KEY=lfab_… node scripts/exemple-serie.mjs --url https://lafabrique.guillaume-barbier.com [--images ./mes-images]
 ```
+
+## 14. Liens de lecture ([ADR-0009](../decisions/0009-liens-de-lecture.md))
+
+Guillaume crée depuis l'éditeur (« Partager ») un lien `https://lafabrique.guillaume-barbier.com/lire/<jeton>` qui ouvre le livre en visionneuse, sans compte : couverture et pages, rien de l'atelier, images en taille écran. Un lien par destinataire (`label`), validité 7 jours, 30 jours ou sans limite, révocable. Un agent voit la liste (`list_shares` : `label`, `expires_at`, `view_count`, `last_viewed_at`) mais ni les liens ni le moyen d'en créer.
