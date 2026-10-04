@@ -241,7 +241,7 @@ $ curl -sS --fail-with-body -T p3.png "<upload_url>"      # dans le bac à sable
 | `forbidden_words` | `[{ word, use? }]` | Mots refusés par `check_text`, avec le remplaçant |
 | `illustration_style` | texte libre | Donné au générateur avec les références |
 
-`check_text` signale en `error` les mots interdits et les guillemets ou tirets contraires au style, en `warning` le Markdown et un texte trop long, en `info` la typographie (espaces insécables en français). Les consignes MCP rappellent les règles des séries actives à chaque connexion ; celles d'un livre se lisent dans `get_book` → `writing_guide`.
+Sans `quote_style` fixé (ni série ni livre), `writing_guide` renvoie au brief et `check_text` ne juge pas la ponctuation des dialogues. `check_text` signale en `error` les mots interdits et les guillemets ou tirets contraires au style, en `warning` le Markdown et un texte trop long, en `info` la typographie (espaces insécables en français). Les consignes MCP rappellent les règles des séries actives à chaque connexion ; celles d'un livre se lisent dans `get_book` → `writing_guide`.
 
 ## 13. Exemple de bout en bout
 

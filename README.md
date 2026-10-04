@@ -45,4 +45,6 @@ claude mcp add --transport http lafabrique https://lafabrique.guillaume-barbier.
   --header "Authorization: Bearer lfab_…"
 ```
 
-Détail (REST, MCP, bonnes pratiques de l'agent) : [`docs/tech/02-api-agents.md`](docs/tech/02-api-agents.md).
+Images en fichiers locaux (bac à sable de l'agent) : `create_upload` puis `curl -T` vers l'URL signée ; autoriser `lafabrique.guillaume-barbier.com` dans les domaines de sortie du bac à sable.
+
+Détail (REST, MCP, séries, règles d'écriture, envois, bonnes pratiques de l'agent) : [`docs/tech/02-api-agents.md`](docs/tech/02-api-agents.md).
