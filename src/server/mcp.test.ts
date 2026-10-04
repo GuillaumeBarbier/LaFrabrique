@@ -6,7 +6,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { beforeEach, describe, expect, it } from "vitest";
 import { inferView } from "@/lib/views";
-import { lintText, mergeRules } from "@/lib/writing";
+import { lintText, mergeRules, writingGuide } from "@/lib/writing";
 import { openDatabase, setDbForTests } from "./db";
 import type { Actor } from "./http";
 import { buildMcpServer } from "./mcp";
@@ -152,5 +152,12 @@ describe("writing helpers", () => {
     expect(lintText("Mama arrive, dit Victoire.", rules, { language: "fr" })).toEqual([]);
     expect(lintText("— Maman !", rules, { language: "fr" }).map((i) => i.code)).toEqual(["dialogue_dash", "forbidden_word", "typography"]);
     expect(lintText("La maman des **renards**.", rules, { language: "fr" }).map((i) => i.code)).toEqual(["forbidden_word", "markdown", "markdown"]);
+  });
+
+  it("do not impose a quote style nobody set (the brief may say otherwise)", () => {
+    const rules = mergeRules(null, { illustrationStyle: "", writingRules: "", quoteStyle: null, forbiddenWords: [], language: "fr" });
+    expect([rules.quoteStyle, rules.quoteStyleSet]).toEqual(["guillemets", false]);
+    expect(writingGuide(rules, { language: "fr" })).toContain("pas de règle fixée");
+    expect(lintText("Viens, dit Victoire. \"Oui\"", rules, { language: "fr" }).filter((i) => i.code === "quote_style")).toEqual([]);
   });
 });

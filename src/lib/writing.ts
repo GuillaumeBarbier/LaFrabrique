@@ -31,6 +31,8 @@ export interface WritingRules {
   illustrationStyle: string;
   writingRules: string;
   quoteStyle: QuoteStyle;
+  /** false: no series or book sets it, `quoteStyle` is the language's default. */
+  quoteStyleSet: boolean;
   forbiddenWords: ForbiddenWord[];
 }
 
@@ -50,13 +52,18 @@ export function mergeRules(
     illustrationStyle: join(series?.illustrationStyle, book.illustrationStyle),
     writingRules: join(series?.writingRules, book.writingRules),
     quoteStyle: book.quoteStyle ?? series?.quoteStyle ?? defaultQuoteStyle(book.language),
+    quoteStyleSet: (book.quoteStyle ?? series?.quoteStyle ?? null) !== null,
     forbiddenWords: [...words.values()],
   };
 }
 
 /** The rules as a short text for the agent (get_book → writingGuide, MCP instructions). */
 export function writingGuide(rules: WritingRules, opts: { language: string; wordsPerSpread?: number | null }): string {
-  const lines = [`- Ponctuation des dialogues : ${QUOTE_STYLE_RULES[rules.quoteStyle]}`];
+  const lines = [
+    rules.quoteStyleSet
+      ? `- Ponctuation des dialogues : ${QUOTE_STYLE_RULES[rules.quoteStyle]}`
+      : `- Ponctuation des dialogues : pas de règle fixée (quote_style) ; suivre le brief s'il en parle, sinon : ${QUOTE_STYLE_RULES[rules.quoteStyle]}`,
+  ];
   if (rules.forbiddenWords.length > 0) {
     lines.push(
       `- Mots à ne jamais écrire : ${rules.forbiddenWords.map((w) => (w.use ? `« ${w.word} » (écrire « ${w.use} »)` : `« ${w.word} »`)).join(", ")}.`,
@@ -137,7 +144,8 @@ export function lintText(text: string, rules: WritingRules, opts: { language: st
     );
   }
 
-  const style = rules.quoteStyle;
+  // Without an explicit rule the brief may say otherwise: dialogue punctuation is not judged.
+  const style = rules.quoteStyleSet ? rules.quoteStyle : null;
   const french = /[«»]/g;
   const english = /[“”]/g;
   const straight = /"/g;
@@ -197,7 +205,7 @@ export function lintText(text: string, rules: WritingRules, opts: { language: st
           : `Espace insécable (et non espace simple) avant « ${m[2]} ».`,
       })),
     );
-    if (style === "guillemets") {
+    if (style === "guillemets" || (style === null && rules.quoteStyle === "guillemets")) {
       issues.push(
         ...findAll(text, /«(?![  ])|(?<![  ])»/g, () => ({
           code: "typography",
