@@ -260,4 +260,118 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE INDEX oauth_tokens_grant ON oauth_tokens(grant_id);
     `,
   },
+  {
+    version: 4,
+    name: "series_uploads",
+    rebuildsTables: true,
+    sql: `
+      -- Series (ADR-0008): a universe shared by several books — characters with their
+      -- references, illustration style, writing rules, default format and typography.
+      CREATE TABLE series (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        illustration_style TEXT NOT NULL DEFAULT '',
+        writing_rules TEXT NOT NULL DEFAULT '',
+        quote_style TEXT CHECK (quote_style IN ('guillemets', 'none', 'dashes', 'english')),
+        forbidden_words TEXT NOT NULL DEFAULT '[]',   -- JSON [{ word, use? }]
+        language TEXT NOT NULL DEFAULT 'fr',
+        age_min INTEGER,
+        age_max INTEGER,
+        format TEXT,
+        typography TEXT,                              -- JSON, NULL = defaults
+        words_per_spread INTEGER,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        updated_by_type TEXT NOT NULL,
+        updated_by_name TEXT NOT NULL,
+        archived_at TEXT,
+        version INTEGER NOT NULL DEFAULT 1
+      );
+
+      -- A book may belong to a series and adds its own style and rules to the series' ones.
+      ALTER TABLE books ADD COLUMN series_id TEXT REFERENCES series(id) ON DELETE SET NULL;
+      ALTER TABLE books ADD COLUMN illustration_style TEXT NOT NULL DEFAULT '';
+      ALTER TABLE books ADD COLUMN writing_rules TEXT NOT NULL DEFAULT '';
+      ALTER TABLE books ADD COLUMN quote_style TEXT CHECK (quote_style IN ('guillemets', 'none', 'dashes', 'english'));
+      ALTER TABLE books ADD COLUMN forbidden_words TEXT NOT NULL DEFAULT '[]';
+      CREATE INDEX books_series ON books(series_id);
+
+      -- A character belongs to a book or to a series (shared by its books, not copied).
+      CREATE TABLE characters_new (
+        id TEXT PRIMARY KEY,
+        book_id TEXT REFERENCES books(id) ON DELETE CASCADE,
+        series_id TEXT REFERENCES series(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT '',
+        appearance TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        updated_by_type TEXT NOT NULL,
+        updated_by_name TEXT NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        CHECK ((book_id IS NULL) != (series_id IS NULL))
+      );
+      INSERT INTO characters_new (id, book_id, series_id, position, name, role, appearance, created_at, updated_at, updated_by_type, updated_by_name, version)
+        SELECT id, book_id, NULL, position, name, role, appearance, created_at, updated_at, updated_by_type, updated_by_name, version FROM characters;
+      DROP TABLE characters;
+      ALTER TABLE characters_new RENAME TO characters;
+      CREATE INDEX characters_book ON characters(book_id, position);
+      CREATE INDEX characters_series ON characters(series_id, position);
+
+      -- Normalised view of a reference image: front, side_right, side_left, back, face,
+      -- three_quarter, sheet, expression:<name>, other ('' = inferred from the label).
+      ALTER TABLE character_images ADD COLUMN view TEXT NOT NULL DEFAULT '';
+
+      -- History of a series (book_id NULL) next to the books'; details = JSON (which image, which target).
+      CREATE TABLE activity_new (
+        id TEXT PRIMARY KEY,
+        book_id TEXT REFERENCES books(id) ON DELETE CASCADE,
+        series_id TEXT REFERENCES series(id) ON DELETE CASCADE,
+        spread_id TEXT,
+        character_id TEXT,
+        actor_type TEXT NOT NULL CHECK (actor_type IN ('human', 'agent')),
+        actor_name TEXT NOT NULL,
+        action TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        snapshot TEXT,
+        details TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      INSERT INTO activity_new (id, book_id, series_id, spread_id, character_id, actor_type, actor_name, action, summary, snapshot, details, created_at, updated_at)
+        SELECT id, book_id, NULL, spread_id, character_id, actor_type, actor_name, action, summary, snapshot, NULL, created_at, updated_at FROM activity;
+      DROP TABLE activity;
+      ALTER TABLE activity_new RENAME TO activity;
+      CREATE INDEX activity_book ON activity(book_id, updated_at);
+      CREATE INDEX activity_series ON activity(series_id, updated_at);
+
+      -- Direct uploads (ADR-0008): a single-use signed URL the agent PUTs a local file to,
+      -- then a commit attaches it to its target. Processed on receipt (asset_id).
+      CREATE TABLE uploads (
+        id TEXT PRIMARY KEY,
+        token_hash TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('spread_illustration', 'cover', 'character_image', 'image')),
+        book_id TEXT REFERENCES books(id) ON DELETE CASCADE,
+        series_id TEXT REFERENCES series(id) ON DELETE CASCADE,
+        target_id TEXT,                    -- spread or character
+        filename TEXT NOT NULL,
+        content_type TEXT,
+        options TEXT NOT NULL DEFAULT '{}', -- JSON: label, view, primary
+        auto_commit INTEGER NOT NULL DEFAULT 0,
+        actor_type TEXT NOT NULL CHECK (actor_type IN ('human', 'agent')),
+        actor_name TEXT NOT NULL,
+        actor_scope TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        received_at TEXT,
+        asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
+        committed_at TEXT,
+        result TEXT,                       -- JSON outcome of the commit
+        CHECK (book_id IS NOT NULL OR series_id IS NOT NULL)
+      );
+      CREATE INDEX uploads_created ON uploads(created_at);
+    `,
+  },
 ];

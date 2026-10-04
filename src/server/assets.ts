@@ -66,7 +66,7 @@ export function assetFilePath(asset: AssetRow, size: AssetSize): { file: string;
  */
 export async function storeImage(
   buffer: Buffer,
-  input: { kind: "illustration" | "cover" | "character"; bookId: string; originalName?: string | null; actor: Actor },
+  input: { kind: "illustration" | "cover" | "character"; bookId: string | null; originalName?: string | null; actor: Pick<Actor, "type" | "name"> },
 ): Promise<AssetRow> {
   if (buffer.length === 0) throw badRequest("Fichier vide.");
   if (buffer.length > MAX_IMAGE_BYTES) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
@@ -123,6 +123,25 @@ export function insertAsset(row: AssetRow): void {
     .run(row);
 }
 
+/** A copy of an image under a new id (a cloned book or character owns its files). */
+export function copyAsset(asset: AssetRow, input: { bookId: string | null; actor: Pick<Actor, "type" | "name"> }): AssetRow {
+  const id = newId();
+  const from = assetDir(asset.id);
+  const to = assetDir(id);
+  fs.mkdirSync(to, { recursive: true });
+  for (const file of fs.readdirSync(from)) fs.copyFileSync(path.join(from, file), path.join(to, file), fs.constants.COPYFILE_FICLONE);
+  const row: AssetRow = {
+    ...asset,
+    id,
+    book_id: input.bookId,
+    created_at: nowIso(),
+    created_by_type: input.actor.type,
+    created_by_name: input.actor.name,
+  };
+  insertAsset(row);
+  return row;
+}
+
 export function deleteAssetFiles(ids: string[]): void {
   for (const id of ids) fs.rmSync(assetDir(id), { recursive: true, force: true });
 }
@@ -136,6 +155,13 @@ export interface ImageUpload {
 
 /** Image bytes from an upload: multipart `file`, or JSON `{ base64 }` / `{ url }` (agents). */
 export async function readImageUpload(req: Request): Promise<ImageUpload> {
+  const input = await readImageInput(req);
+  if ("uploadId" in input) throw badRequest("uploadId n'est pas accepté ici.");
+  return input;
+}
+
+/** Like readImageUpload, or JSON `{ uploadId }`: a file already sent to a signed upload URL. */
+export async function readImageInput(req: Request): Promise<ImageUpload | { uploadId: string; fields: Record<string, string | boolean> }> {
   const type = req.headers.get("content-type") ?? "";
   const declared = Number(req.headers.get("content-length") ?? 0);
   if (declared > MAX_IMAGE_BYTES * 1.4) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
@@ -152,11 +178,12 @@ export async function readImageUpload(req: Request): Promise<ImageUpload> {
     const name = typeof body.name === "string" ? body.name : null;
     const fields: Record<string, string | boolean> = {};
     for (const [k, v] of Object.entries(body)) if ((typeof v === "string" || typeof v === "boolean") && k !== "base64") fields[k] = v;
+    if (typeof body.uploadId === "string") return { uploadId: body.uploadId, fields };
     if (typeof body.base64 === "string") return { buffer: decodeBase64(body.base64), name, fields };
     if (typeof body.url === "string") {
       return { buffer: await fetchImage(body.url), name: name ?? body.url.split("/").pop() ?? null, fields };
     }
-    throw badRequest("JSON attendu : { base64 } ou { url }.");
+    throw badRequest("JSON attendu : { uploadId }, { base64 } ou { url }.");
   }
   if (type.startsWith("image/")) return { buffer: Buffer.from(await req.arrayBuffer()), name: null, fields: {} };
   throw badRequest("Envoyer un fichier (multipart « file »), une image brute, ou du JSON { base64 | url }.");
@@ -177,4 +204,14 @@ export async function fetchImage(url: string): Promise<Buffer> {
     if (err instanceof HttpError && err.status === 413) throw new HttpError(413, "too_large", "Image trop lourde (40 Mo au plus).");
     throw err;
   }
+}
+
+/** Form or JSON fields of a reference image upload, typed for characterImageSchema. */
+export function imageFields(fields: Record<string, string | boolean>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (typeof fields.label === "string") out.label = fields.label;
+  if (typeof fields.view === "string" && fields.view) out.view = fields.view;
+  if (fields.primary === true || fields.primary === "true") out.primary = true;
+  if (typeof fields.position === "string" && /^\d+$/.test(fields.position)) out.position = Number(fields.position);
+  return out;
 }

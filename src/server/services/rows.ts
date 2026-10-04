@@ -1,6 +1,7 @@
 import type { BookStatus, IllustrationFit, TextAlign, TextValign, Typography } from "@/lib/book";
 import { DEFAULT_TYPOGRAPHY, countWords } from "@/lib/book";
 import type { ActorType, AssetRef, Spread } from "@/lib/types";
+import type { QuoteStyle } from "@/lib/writing";
 import type { DB } from "../db";
 
 export interface BookRow {
@@ -22,6 +23,11 @@ export interface BookRow {
   updated_at: string;
   archived_at: string | null;
   version: number;
+  series_id: string | null;
+  illustration_style: string;
+  writing_rules: string;
+  quote_style: QuoteStyle | null;
+  forbidden_words: string;
 }
 
 export interface SpreadRow {

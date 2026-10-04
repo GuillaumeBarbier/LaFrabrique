@@ -168,7 +168,7 @@ export function Editor({ initial, customFonts }: { initial: Book; customFonts: C
       const { activity: entries } = await apiFetch<{ activity: ActivityEntry[] }>(`/api/v1/books/${book.id}/activity?limit=1${filter}`);
       const last = entries[0];
       if (!last?.restorable) return;
-      applyBook(await apiFetch<Book>(`/api/v1/activity/${last.id}/restore`, { method: "POST" }));
+      applyBook(await apiFetch<Book>(`/api/v1/activity/${last.id}/restore?bookId=${book.id}`, { method: "POST" }));
     } catch (err) {
       toast.show(errorMessage(err), { tone: "danger" });
     }

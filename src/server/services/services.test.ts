@@ -81,7 +81,7 @@ describe("books and spreads", () => {
     const spread = book.spreads[0]!;
     updateSpread(book.id, spread.id, { text: "Il était une fois" }, agent);
     updateSpread(book.id, spread.id, { text: "Il était une fois un renard", illustrationBrief: "Un renard" }, agent);
-    const history = listActivity(book.id, { spreadId: spread.id });
+    const history = listActivity({ bookId: book.id }, { spreadId: spread.id });
     expect(history).toHaveLength(1);
     expect(history[0]?.summary).toBe("texte, brief d'illustration");
     restoreActivity(history[0]!.id, human);
@@ -107,7 +107,7 @@ describe("books and spreads", () => {
     expect(ids[2]).toBe(added.id);
     deleteSpread(book.id, added.id, agent);
     expect(getBook(book.id).spreads).toHaveLength(2);
-    const deletion = listActivity(book.id).find((a) => a.action === "spread.delete")!;
+    const deletion = listActivity({ bookId: book.id }).find((a) => a.action === "spread.delete")!;
     restoreActivity(deletion.id, human);
     const back = getBook(book.id).spreads;
     expect(back.map((s) => s.position)).toEqual([0, 1, 2]);

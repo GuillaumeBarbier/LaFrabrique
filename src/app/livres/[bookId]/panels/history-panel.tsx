@@ -32,7 +32,7 @@ export function HistoryPanel({
   async function restore(entry: ActivityEntry) {
     setBusy(entry.id);
     try {
-      onRestored(await apiFetch<Book>(`/api/v1/activity/${entry.id}/restore`, { method: "POST" }));
+      onRestored(await apiFetch<Book>(`/api/v1/activity/${entry.id}/restore?bookId=${book.id}`, { method: "POST" }));
       toast.show("Version restaurée");
     } catch (err) {
       toast.show(errorMessage(err), { tone: "danger" });

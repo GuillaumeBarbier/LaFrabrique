@@ -1,17 +1,19 @@
-import { readImageUpload, storeImage } from "@/server/assets";
+import { imageFields, readImageInput, storeImage } from "@/server/assets";
 import { api } from "@/server/http";
-import { addCharacterImage, characterImageSchema, getCharacter } from "@/server/services/characters";
+import { addCharacterImage, characterImageSchema, characterOfBook, getCharacter } from "@/server/services/characters";
+import { addCharacterImageFromUpload } from "@/server/services/uploads";
 
 type P = { bookId: string; characterId: string };
 
-/** A reference image: multipart `file` (+ `label`, `primary`), raw image/*, or JSON { base64 | url, label?, primary? }. */
+/** A reference image: multipart `file` (+ `label`, `view`, `primary`), raw image/*, or JSON { uploadId | base64 | url, label?, view?, primary? }. */
 export const POST = api<P>("write", async ({ req, actor, params }) => {
-  getCharacter(params.bookId, params.characterId);
-  const { buffer, name, fields } = await readImageUpload(req);
-  const input = characterImageSchema.parse({
-    label: typeof fields.label === "string" ? fields.label : undefined,
-    primary: fields.primary === true || fields.primary === "true" ? true : undefined,
-  });
-  const asset = await storeImage(buffer, { kind: "character", bookId: params.bookId, originalName: name, actor });
-  return Response.json(addCharacterImage(params.bookId, params.characterId, asset, input, actor), { status: 201 });
+  const c = characterOfBook(params.bookId, params.characterId);
+  const input = await readImageInput(req);
+  const fields = characterImageSchema.parse(imageFields(input.fields));
+  if ("uploadId" in input) {
+    addCharacterImageFromUpload(c.id, input.uploadId, fields, actor);
+    return Response.json(getCharacter(c.id), { status: 201 });
+  }
+  const asset = await storeImage(input.buffer, { kind: "character", bookId: c.book_id, originalName: input.name, actor });
+  return Response.json(addCharacterImage(c.id, asset, fields, actor), { status: 201 });
 });

@@ -1,50 +1,36 @@
 import { z } from "zod";
 import {
-  BOOK_FORMATS,
   BOOK_STATUSES,
   DEFAULT_FORMAT,
   DEFAULT_TYPOGRAPHY,
+  effectiveDpi,
+  getFormat,
   ILLUSTRATION_FITS,
   STATUS_LABELS,
   TEXT_ALIGNS,
   TEXT_VALIGNS,
   type Typography,
 } from "@/lib/book";
-import type { Book, BookSummary, Spread } from "@/lib/types";
+import type { ActivityDetail, Book, BookSummary, Spread } from "@/lib/types";
+import { mergeRules, writingGuide, type WritingRules } from "@/lib/writing";
 import { deleteAssetFiles, type AssetRow } from "../assets";
 import { getDb } from "../db";
 import { publish } from "../events";
 import type { Actor } from "../http";
 import { badRequest, HttpError, newId, notFound, nowIso } from "../util";
 import { getActivityRow, recordActivity } from "./activity";
-import { listCharacters, restoreCharacterSnapshot, validCharacterIds } from "./characters";
-import { fontKeyExists } from "./fonts";
-import { assetUrls, type BookRow, loadAssetRefs, parseTypography, type SpreadRow, toSpread } from "./rows";
+import { copyCharacters, listCharacters, restoreCharacterSnapshot, validCharacterIds } from "./characters";
+import { assetUrls, type BookRow, loadAssetRefs, parseIds, parseTypography, type SpreadRow, toSpread } from "./rows";
+import { age, formatKey, hex, language, rulesSchema, typographyPatchSchema } from "./schemas";
+import { getSeriesRow, parseWords, restoreSeriesSnapshot, seriesDefaults, seriesRules } from "./series";
 
 // ---------------------------------------------------------------------------------------
 // Validation (shared by REST and MCP)
 // ---------------------------------------------------------------------------------------
 
-const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Couleur attendue au format #RRGGBB.");
-const fontKey = z.string().min(1).max(80).refine(fontKeyExists, "Police inconnue (voir GET /api/v1/fonts).");
-const age = z.number().int().min(0).max(18).nullable();
+export { typographyPatchSchema };
 
-export const typographyPatchSchema = z
-  .object({
-    titleFont: fontKey,
-    bodyFont: fontKey,
-    titleSizePt: z.number().min(8).max(144),
-    bodySizePt: z.number().min(6).max(96),
-    lineHeight: z.number().min(0.8).max(3),
-    textColor: hex,
-    pageColor: hex,
-    textAlign: z.enum(TEXT_ALIGNS),
-    textValign: z.enum(TEXT_VALIGNS),
-  })
-  .partial()
-  .strict();
-
-const formatKey = z.enum(BOOK_FORMATS.map((f) => f.key) as [string, ...string[]]);
+const spreadCount = z.number().int().min(0).max(40);
 
 export const createBookSchema = z
   .object({
@@ -52,12 +38,22 @@ export const createBookSchema = z
     subtitle: z.string().max(200).optional(),
     author: z.string().max(160).optional(),
     illustrator: z.string().max(160).optional(),
-    language: z.string().min(2).max(8).optional(),
+    language: language.optional(),
     ageMin: age.optional(),
     ageMax: age.optional(),
     format: formatKey.optional(),
     brief: z.string().max(20_000).optional(),
-    spreads: z.number().int().min(0).max(40).optional(),
+    wordsPerSpread: z.number().int().min(1).max(1000).nullable().optional(),
+    typography: typographyPatchSchema.optional(),
+    /** Number of blank spreads (12 by default). `spreads` is the former name. */
+    spreadCount: spreadCount.optional(),
+    spreads: spreadCount.optional(),
+    /** Joins a series: its characters, style, rules and defaults (format, typography, language, ages). */
+    seriesId: z.string().max(40).optional(),
+    illustrationStyle: rulesSchema.illustrationStyle.optional(),
+    writingRules: rulesSchema.writingRules.optional(),
+    quoteStyle: rulesSchema.quoteStyle.optional(),
+    forbiddenWords: rulesSchema.forbiddenWords.optional(),
   })
   .strict();
 
@@ -67,7 +63,7 @@ export const updateBookSchema = z
     subtitle: z.string().max(200),
     author: z.string().max(160),
     illustrator: z.string().max(160),
-    language: z.string().min(2).max(8),
+    language,
     ageMin: age,
     ageMax: age,
     status: z.enum(BOOK_STATUSES),
@@ -76,8 +72,21 @@ export const updateBookSchema = z
     wordsPerSpread: z.number().int().min(1).max(1000).nullable(),
     typography: typographyPatchSchema,
     archived: z.boolean(),
+    /** Joins (or leaves, with null) a series. Pages lose the characters they no longer see. */
+    seriesId: z.string().max(40).nullable(),
+    ...rulesSchema,
   })
   .partial()
+  .strict();
+
+export const cloneBookSchema = z
+  .object({
+    title: z.string().trim().min(1).max(160),
+    subtitle: z.string().max(200).optional(),
+    spreadCount: spreadCount.optional(),
+    /** Copy the story brief too (off by default: a new story). */
+    includeBrief: z.boolean().optional(),
+  })
   .strict();
 
 export const createSpreadSchema = z
@@ -139,12 +148,31 @@ function openRequests(bookId: string): { forAgent: number; forHuman: number } {
   };
 }
 
+/** Style and rules that apply to a book: its series' ones, then its own. */
+export function bookRules(row: BookRow): WritingRules {
+  const series = row.series_id ? seriesRules(getSeriesRow(row.series_id)) : null;
+  return mergeRules(series, {
+    illustrationStyle: row.illustration_style,
+    writingRules: row.writing_rules,
+    quoteStyle: row.quote_style,
+    forbiddenWords: parseWords(row.forbidden_words),
+    language: row.language,
+  });
+}
+
+export function getBookRules(id: string): { rules: WritingRules; language: string; wordsPerSpread: number | null; seriesId: string | null } {
+  const row = getBookRow(id);
+  return { rules: bookRules(row), language: row.language, wordsPerSpread: row.words_per_spread, seriesId: row.series_id };
+}
+
 export function getBook(id: string): Book {
   const db = getDb();
   const row = getBookRow(id);
   const rows = spreadRows(id);
   const assets = loadAssetRefs(db, [row.cover_asset_id, ...rows.map((s) => s.illustration_asset_id)]);
   const spreads = rows.map((s) => toSpread(s, assets));
+  const series = row.series_id ? getSeriesRow(row.series_id) : null;
+  const effective = bookRules(row);
   return {
     id: row.id,
     title: row.title,
@@ -160,6 +188,14 @@ export function getBook(id: string): Book {
     typography: parseTypography(row.typography),
     brief: row.brief,
     wordsPerSpread: row.words_per_spread,
+    seriesId: row.series_id,
+    series: series ? { id: series.id, title: series.title } : null,
+    illustrationStyle: row.illustration_style,
+    writingRules: row.writing_rules,
+    quoteStyle: row.quote_style,
+    forbiddenWords: parseWords(row.forbidden_words),
+    effective,
+    writingGuide: writingGuide(effective, { language: row.language, wordsPerSpread: row.words_per_spread }),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     archivedAt: row.archived_at,
@@ -277,31 +313,82 @@ export function createBook(input: z.infer<typeof createBookSchema>, actor: Actor
   const db = getDb();
   const id = newId();
   const now = nowIso();
+  // A book of a series starts from the series' defaults; what is given wins.
+  const series = input.seriesId ? getSeriesRow(input.seriesId) : null;
+  const defaults = series ? seriesDefaults(series) : null;
+  const ageMin = input.ageMin !== undefined ? input.ageMin : (defaults?.ageMin ?? null);
+  const ageMax = input.ageMax !== undefined ? input.ageMax : (defaults?.ageMax ?? null);
+  if (ageMin !== null && ageMax !== null && ageMin > ageMax) throw badRequest("L'âge minimum dépasse l'âge maximum.");
+  const typography: Typography = { ...DEFAULT_TYPOGRAPHY, ...(defaults?.typography ?? {}), ...(input.typography ?? {}) };
   db.transaction(() => {
     db.prepare(
-      `INSERT INTO books (id, title, subtitle, author, illustrator, language, age_min, age_max, status, format, typography, brief, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'idea', ?, ?, ?, ?, ?)`,
+      `INSERT INTO books (id, title, subtitle, author, illustrator, language, age_min, age_max, status, format, typography, brief,
+        words_per_spread, series_id, illustration_style, writing_rules, quote_style, forbidden_words, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'idea', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       id,
       input.title,
       input.subtitle ?? "",
       input.author ?? "",
       input.illustrator ?? "",
-      input.language ?? "fr",
-      input.ageMin ?? null,
-      input.ageMax ?? null,
-      input.format ?? DEFAULT_FORMAT,
-      JSON.stringify(DEFAULT_TYPOGRAPHY),
+      input.language ?? defaults?.language ?? "fr",
+      ageMin,
+      ageMax,
+      input.format ?? defaults?.format ?? DEFAULT_FORMAT,
+      JSON.stringify(typography),
       input.brief ?? "",
+      input.wordsPerSpread !== undefined ? input.wordsPerSpread : (defaults?.wordsPerSpread ?? null),
+      series?.id ?? null,
+      input.illustrationStyle ?? "",
+      input.writingRules ?? "",
+      input.quoteStyle ?? null,
+      JSON.stringify(input.forbiddenWords ?? []),
       now,
       now,
     );
-    const count = input.spreads ?? 12;
+    const count = input.spreadCount ?? input.spreads ?? 12;
     for (let i = 0; i < count; i++) insertSpreadRow(blankSpread(id, i, actor));
-    recordActivity({ bookId: id, actor, action: "book.create", labels: ["livre créé"] });
+    recordActivity({ bookId: id, actor, action: "book.create", labels: [series ? `livre créé dans la série « ${series.title} »` : "livre créé"] });
   })();
   publish("book", id, actor);
   return getBook(id);
+}
+
+/**
+ * A new book with the setup of another: series, format, typography, language, ages, style,
+ * rules, and copies of its own characters with their images. No pages are copied.
+ */
+export function cloneBookSetup(fromBookId: string, input: z.infer<typeof cloneBookSchema>, actor: Actor): { book: Book; copiedCharacters: number } {
+  const db = getDb();
+  const from = getBookRow(fromBookId);
+  let book!: Book;
+  let copied = 0;
+  db.transaction(() => {
+    book = createBook(
+      {
+        title: input.title,
+        subtitle: input.subtitle,
+        author: from.author,
+        illustrator: from.illustrator,
+        language: from.language,
+        ageMin: from.age_min,
+        ageMax: from.age_max,
+        format: from.format as z.infer<typeof formatKey>,
+        typography: parseTypography(from.typography),
+        wordsPerSpread: from.words_per_spread,
+        brief: input.includeBrief ? from.brief : "",
+        spreadCount: input.spreadCount ?? 12,
+        seriesId: from.series_id ?? undefined,
+        illustrationStyle: from.illustration_style,
+        writingRules: from.writing_rules,
+        quoteStyle: from.quote_style,
+        forbiddenWords: parseWords(from.forbidden_words),
+      },
+      actor,
+    );
+    copied = copyCharacters(fromBookId, book.id, actor);
+  })();
+  return { book: getBook(book.id), copiedCharacters: copied };
 }
 
 const BOOK_LABELS: Record<string, string> = {
@@ -317,11 +404,21 @@ const BOOK_LABELS: Record<string, string> = {
   wordsPerSpread: "longueur cible",
   typography: "typographie",
   archived: "archivage",
+  seriesId: "série",
+  illustrationStyle: "style d'illustration",
+  writingRules: "règles d'écriture",
+  quoteStyle: "guillemets",
+  forbiddenWords: "mots à éviter",
 };
 
 export function updateBook(id: string, patch: z.infer<typeof updateBookSchema>, actor: Actor): Book {
+  return updateBookWithChanges(id, patch, actor).book;
+}
+
+export function updateBookWithChanges(id: string, patch: z.infer<typeof updateBookSchema>, actor: Actor): { book: Book; changed: string[] } {
   const db = getDb();
   const before = getBookRow(id);
+  if (patch.seriesId) getSeriesRow(patch.seriesId);
   const typography: Typography = { ...parseTypography(before.typography), ...(patch.typography ?? {}) };
   const next: BookRow = {
     ...before,
@@ -338,26 +435,62 @@ export function updateBook(id: string, patch: z.infer<typeof updateBookSchema>, 
     words_per_spread: patch.wordsPerSpread !== undefined ? patch.wordsPerSpread : before.words_per_spread,
     typography: JSON.stringify(typography),
     archived_at: patch.archived === undefined ? before.archived_at : patch.archived ? (before.archived_at ?? nowIso()) : null,
+    series_id: patch.seriesId !== undefined ? patch.seriesId : before.series_id,
+    illustration_style: patch.illustrationStyle ?? before.illustration_style,
+    writing_rules: patch.writingRules ?? before.writing_rules,
+    quote_style: patch.quoteStyle !== undefined ? patch.quoteStyle : before.quote_style,
+    forbidden_words: patch.forbiddenWords !== undefined ? JSON.stringify(patch.forbiddenWords) : before.forbidden_words,
     updated_at: nowIso(),
     version: before.version + 1,
   };
   if (next.age_min !== null && next.age_max !== null && next.age_min > next.age_max) {
     throw badRequest("L'âge minimum dépasse l'âge maximum.");
   }
-  const labels = [...new Set(Object.keys(patch).map((k) => BOOK_LABELS[k]).filter((l): l is string => !!l))];
-  if (patch.status && patch.status !== before.status) labels.push(`statut : ${STATUS_LABELS[patch.status]}`);
+  const COLUMN: Record<string, keyof BookRow> = {
+    title: "title",
+    subtitle: "subtitle",
+    author: "author",
+    illustrator: "illustrator",
+    language: "language",
+    ageMin: "age_min",
+    ageMax: "age_max",
+    status: "status",
+    format: "format",
+    brief: "brief",
+    wordsPerSpread: "words_per_spread",
+    typography: "typography",
+    archived: "archived_at",
+    seriesId: "series_id",
+    illustrationStyle: "illustration_style",
+    writingRules: "writing_rules",
+    quoteStyle: "quote_style",
+    forbiddenWords: "forbidden_words",
+  };
+  const changed = Object.keys(patch).filter((k) => COLUMN[k] && next[COLUMN[k]] !== before[COLUMN[k]]);
+  if (changed.length === 0) return { book: getBook(id), changed };
+  const labels = [...new Set(changed.map((k) => BOOK_LABELS[k]).filter((l): l is string => !!l))];
+  if (changed.includes("status")) labels.push(`statut : ${STATUS_LABELS[next.status]}`);
   db.transaction(() => {
     db.prepare(
       `UPDATE books SET title=@title, subtitle=@subtitle, author=@author, illustrator=@illustrator, language=@language,
         age_min=@age_min, age_max=@age_max, status=@status, format=@format, brief=@brief, words_per_spread=@words_per_spread,
-        typography=@typography, archived_at=@archived_at, updated_at=@updated_at, version=@version WHERE id=@id`,
+        typography=@typography, archived_at=@archived_at, series_id=@series_id, illustration_style=@illustration_style,
+        writing_rules=@writing_rules, quote_style=@quote_style, forbidden_words=@forbidden_words, updated_at=@updated_at,
+        version=@version WHERE id=@id`,
     ).run(next);
-    if (labels.length > 0) {
-      recordActivity({ bookId: id, actor, action: "book.update", labels, snapshot: before, coalesce: true });
+    if (next.series_id !== before.series_id) {
+      // Pages forget the characters of the series the book left (derived clean-up, no version bump).
+      const known = new Set(listCharacters(id).map((c) => c.id));
+      const clean = db.prepare("UPDATE spreads SET character_ids = ? WHERE id = ?");
+      for (const s of spreadRows(id)) {
+        const ids = parseIds(s.character_ids);
+        if (ids.some((x) => !known.has(x))) clean.run(JSON.stringify(ids.filter((x) => known.has(x))), s.id);
+      }
     }
+    recordActivity({ bookId: id, actor, action: "book.update", labels, snapshot: before, coalesce: true });
   })();
   publish("book", id, actor);
-  return getBook(id);
+  return { book: getBook(id), changed };
 }
 
 /** Humans only (ADR-0002). Files go too: nothing can restore a deleted book. */
@@ -375,6 +508,27 @@ export function deleteBook(id: string, actor: Actor): void {
   publish("deleted", id, actor);
 }
 
+/** Print resolution of an image on one page of the book (bleed included). */
+export function imageDpi(bookId: string, asset: Pick<AssetRow, "width" | "height">): number | null {
+  if (!asset.width || !asset.height) return null;
+  return effectiveDpi(getFormat(getBookRow(bookId).format), asset.width, asset.height);
+}
+
+function imageChange(bookId: string, target: "spread_illustration" | "cover", targetId: string | null, asset: AssetRow | null, previous: string | null): ActivityDetail {
+  return {
+    target,
+    targetId,
+    assetId: asset?.id ?? null,
+    previousAssetId: previous,
+    filename: asset?.original_name ?? null,
+    width: asset?.width ?? null,
+    height: asset?.height ?? null,
+    dpi: asset ? imageDpi(bookId, asset) : null,
+    ...(asset ? {} : { removed: true }),
+  };
+}
+
+/** Each image change is its own history entry: any one can be undone. */
 export function setCover(bookId: string, asset: AssetRow | null, actor: Actor): Book {
   const db = getDb();
   const before = getBookRow(bookId);
@@ -384,7 +538,14 @@ export function setCover(bookId: string, asset: AssetRow | null, actor: Actor): 
       nowIso(),
       bookId,
     );
-    recordActivity({ bookId, actor, action: "book.update", labels: ["couverture"], snapshot: before, coalesce: true });
+    recordActivity({
+      bookId,
+      actor,
+      action: "book.update",
+      labels: [asset ? "couverture" : "couverture retirée"],
+      snapshot: before,
+      details: [imageChange(bookId, "cover", null, asset, before.cover_asset_id)],
+    });
   })();
   publish("book", bookId, actor);
   return getBook(bookId);
@@ -505,9 +666,9 @@ export function setIllustration(bookId: string, spreadId: string, asset: AssetRo
       spreadId,
       actor,
       action: "spread.update",
-      labels: [asset ? "illustration" : "illustration retirée"],
+      labels: [asset ? `illustration${asset.original_name ? ` (${asset.original_name})` : ""}` : "illustration retirée"],
       snapshot: before,
-      coalesce: true,
+      details: [imageChange(bookId, "spread_illustration", spreadId, asset, before.illustration_asset_id)],
     });
     touchBook(bookId);
   })();
@@ -556,22 +717,36 @@ export function reorderSpreads(bookId: string, order: string[], actor: Actor): B
 // Restore (F1.8)
 // ---------------------------------------------------------------------------------------
 
-export function restoreActivity(activityId: string, actor: Actor): Book {
+/** Puts back the state from before a history entry. Returns the books it touched. */
+export function restoreActivity(activityId: string, actor: Actor): { bookIds: string[]; seriesId: string | null } {
   const db = getDb();
   const entry = getActivityRow(activityId);
   if (!entry || !entry.snapshot) throw notFound("Version");
-  const bookId = entry.book_id;
   const snapshot = JSON.parse(entry.snapshot) as unknown;
   const when = new Date(entry.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" });
+  let touched: string[] = entry.book_id ? [entry.book_id] : [];
 
   db.transaction(() => {
+    if (entry.action === "character.update" || entry.action === "character.delete") {
+      touched = restoreCharacterSnapshot(snapshot, when, actor);
+      return;
+    }
+    if (entry.action === "series.update") {
+      touched = restoreSeriesSnapshot(snapshot, when, actor);
+      return;
+    }
+    const bookId = entry.book_id;
+    if (!bookId) throw badRequest("Cette entrée d'historique ne se restaure pas.");
     if (entry.action === "book.update") {
       const before = getBookRow(bookId);
-      const s = snapshot as BookRow;
+      // Snapshots from before migration 4 have no style or rules; the series link is not restored.
+      const s = { illustration_style: "", writing_rules: "", quote_style: null, forbidden_words: "[]", ...(snapshot as Partial<BookRow>) } as BookRow;
       db.prepare(
         `UPDATE books SET title=@title, subtitle=@subtitle, author=@author, illustrator=@illustrator, language=@language,
           age_min=@age_min, age_max=@age_max, status=@status, format=@format, brief=@brief, words_per_spread=@words_per_spread,
-          typography=@typography, cover_asset_id=@cover_asset_id, archived_at=@archived_at, updated_at=@updated_at, version=@version WHERE id=@id`,
+          typography=@typography, cover_asset_id=@cover_asset_id, archived_at=@archived_at, illustration_style=@illustration_style,
+          writing_rules=@writing_rules, quote_style=@quote_style, forbidden_words=@forbidden_words, updated_at=@updated_at,
+          version=@version WHERE id=@id`,
       ).run({ ...s, id: bookId, updated_at: nowIso(), version: before.version + 1 });
       recordActivity({ bookId, actor, action: "book.update", labels: [`livre restauré (version du ${when})`], snapshot: before });
     } else if (entry.action === "spread.update" || entry.action === "spread.delete") {
@@ -595,19 +770,12 @@ export function restoreActivity(activityId: string, actor: Actor): Book {
       const stmt = db.prepare("UPDATE spreads SET position = ? WHERE id = ?");
       [...order, ...rest].forEach((id, i) => stmt.run(i, id));
       recordActivity({ bookId, actor, action: "spread.reorder", labels: [`ordre restauré (version du ${when})`], snapshot: current });
-    } else if (entry.action === "character.update" || entry.action === "character.delete") {
-      restoreCharacterSnapshot(bookId, snapshot, when, actor);
     } else {
       throw badRequest("Cette entrée d'historique ne se restaure pas.");
     }
     touchBook(bookId);
   })();
-  publish("book", bookId, actor);
-  return getBook(bookId);
+  for (const bookId of touched) publish("book", bookId, actor);
+  return { bookIds: touched, seriesId: entry.series_id };
 }
 
-export function bookIdOfActivity(activityId: string): string {
-  const entry = getActivityRow(activityId);
-  if (!entry) throw notFound("Version");
-  return entry.book_id;
-}
